@@ -5,6 +5,7 @@ A small mobile web app for keeping notes while playing Blue Prince. Open a room,
 ## Features
 
 - Open a room, place, item, book or person by its exact in-game name, without a list of names (no spoilers)
+- Books have a page per volume or edition; a title shared by several editions asks which one you mean
 - Create your own General page with any title for everything else
 - Overview tabs for House, Grounds (outside and underground), Items, Books, People and General
 - Each room page uses the room's colour, number and a drawing of its standard door layout
