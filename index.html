@@ -285,6 +285,23 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
 #dayback{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 8px 8px 14px;border:1px solid var(--accent);border-radius:8px;background:rgba(233,196,106,.1);font-family:var(--f-mono);font-size:13px;color:var(--accent)}
 .hint2{display:flex;flex-direction:column;gap:4px;padding:10px 0 0 12px;border-left:2px solid var(--rc,var(--accent))}
 .hint2 .label{color:var(--accent)}
+.secret{display:flex;gap:14px;align-items:flex-start;padding:16px;border-radius:10px;background:#b71c1c;color:#fff;border:3px solid #fff;box-shadow:0 0 0 2px #b71c1c,0 6px 18px rgba(0,0,0,.35)}
+.secret .oct{flex:none;line-height:0}
+.secret-tx{display:flex;flex-direction:column;gap:4px;min-width:0}
+.secret strong{font-family:var(--f-mono);font-weight:500;font-size:22px;letter-spacing:.22em;line-height:1.1}
+.secret .sub{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.9}
+.secret p{margin:4px 0 0;font-size:16px;color:#fff}
+.secret .btn{margin-top:8px;align-self:flex-start;background:#fff;color:#b71c1c;border-color:#fff;font-weight:500}
+.secret:not(.warn){background:rgba(183,28,28,.18);border-color:#e57373;box-shadow:none}
+.secret:not(.warn) p{color:var(--ink)}
+.secret.warn p{font-weight:600}
+.upg-badge{align-self:flex-start;margin-top:4px;font-family:var(--f-mono);font-size:12px;letter-spacing:.06em;padding:3px 10px;border-radius:99px;background:var(--accent);color:var(--on-accent);max-width:calc(100% - 80px);overflow-wrap:anywhere}
+.upg-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 12px 6px 16px;border-bottom:1px solid var(--line)}
+.upg-bar:not(.on){justify-content:flex-end}
+.upg-bar .upg-tx{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.upg-bar .label{color:var(--accent);font-size:10px}
+.upg-line{display:block;font-family:var(--f-mono);font-size:11px;font-weight:400;color:var(--accent);letter-spacing:.02em}
+.modal-input{width:100%;min-height:var(--tap);padding:0 12px;border:1px solid var(--line);border-radius:8px;background:rgba(255,255,255,.06)}
 </style>
 </head>
 <body>
@@ -447,6 +464,39 @@ const BY_SLUG = Object.fromEntries(ROOMS.map(r=>[r.slug,r]));
 const BY_NORM = Object.fromEntries(ROOMS.map(r=>[norm(r.name),r]));
 BY_NORM["lost found"] = BY_SLUG["lost-and-found"];
 // Second, deeper hint per room or place. Opens only after the first hint. Based on blueprince.wiki.gg where possible.
+// Secret rooms: not in the starting draft pool. Value = rooms that unlock it (any one is enough); empty = no single room.
+// Based on blueprince.wiki.gg/wiki/Draft_pool. Never shown to the user by name, to avoid spoilers.
+const SECRET = (()=>{
+  const m = {}, add = (names, req) => names.split(",").forEach(n=>m[n]=req);
+  add("Locker Room,Pump Room,Sauna",["pool"]);
+  add("Morning Room",["kitchen"]);
+  add("Dovecote,The Kennel,Clock Tower,Solarium,Dormitory,Vestibule,Casino",["drafting-studio"]);
+  add("Classroom",["drafting-studio","schoolhouse"]);
+  add("Gift Shop,Gallery,Trophy Room",["room-46"]);
+  add("Room 8",["gallery","lost-and-found","shrine"]);
+  add("Toolshed,Shelter,Schoolhouse,Shrine,Root Cellar,Hovel,Trading Post,Tomb",["garage","west-path"]);
+  add("Planetarium,Mechanarium,Treasure Trove,Throne Room,Tunnel,Conservatory,Lost & Found,Closed Exhibit,Secret Garden,The Armory",[]);
+  return m;
+})();
+const OCTAGON = '<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"><path d="M16 2h16l14 14v16L32 46H16L2 32V16z" fill="#c62828" stroke="#fff" stroke-width="3"/><path d="M24 12v16" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="24" cy="36" r="3" fill="#fff"/></svg>';
+// Returns {el, gate}: gate is true when the room content should stay folded until the user confirms
+function secretNotice(r, s){
+  const req = SECRET[r.name];
+  if(!req) return null;
+  const known = req.some(sl=>sl!==r.slug && data.rooms[sl] && data.rooms[sl].visitedAt);
+  const warn = req.length>0 && !known;
+  const gate = warn && !s.secretOk;
+  const box = el("div",{class:"secret"+(warn?" warn":""),role:warn?"alert":null},
+    el("span",{class:"oct",html:OCTAGON}),
+    el("div",{class:"secret-tx"},
+      el("strong",{text:"SECRET"}),
+      el("span",{class:"sub",text:"View at your own discretion"}),
+      el("p",{text: warn
+        ? "You haven't noted the room that unlocks this one yet. This page may spoil things you have not found."
+        : "This room is not in the starting draft pool. Its hints may reveal more than usual."}),
+      gate ? el("button",{class:"btn",type:"button",text:"I understand, show the room",onclick:()=>{ s.secretOk=true; save(); render() }}) : null));
+  return {el:box, gate};
+}
 const HINT2 = {
 "The Foundation":"It also gives you a way down below the house, which is where several underground places start. Once placed, it stays put on every following day.",
 "Entrance Hall":"Compare the room on different days. Notes, frames and objects that change are often clues for puzzles elsewhere in the house.",
@@ -979,7 +1029,7 @@ function roomList(rooms){
     const s = room(r.slug), open = s.todos.filter(t=>!t.done).length;
     ul.append(el("li",{},el("a",{class:"rrow",href:"#"+r.slug,style:roomVars(r)},
       el("span",{class:"mini",html:planSvg(r,26)}),
-      el("span",{class:"nm",text:r.name}),
+      el("span",{class:"nm"},r.name, s.upgrade ? el("small",{class:"upg-line",text:s.upgrade.text?`Upgraded: ${s.upgrade.text}`:"Upgraded"}) : null),
       el("span",{class:"no",text:r.n?`№ ${pad(r.n)}`:CAT[r.cat].place?CAT[r.cat].label:"Outer"}),
       el("span",{class:"open"+(open?"":" zero"),title:"Open to-dos",text:open?String(open):"–"}))));
   });
@@ -999,6 +1049,35 @@ function renderRooms(){
   if(sort==="name") list.sort((a,b)=>a.name.localeCompare(b.name));
   if(sort==="open") list.sort((a,b)=>room(b.slug).todos.filter(t=>!t.done).length-room(a.slug).todos.filter(t=>!t.done).length);
   view.append(list.length ? roomList(list) : el("p",{class:"muted",text:"No rooms match this search."}));
+}
+
+
+// ---------- Upgrades ----------
+function upgradeBar(r, s){
+  const edit = async () => {
+    const res = await openModal(done=>{
+      const inp = el("input",{type:"text",value:s.upgrade?s.upgrade.text||"":"",placeholder:"e.g. new name or what changed","aria-label":"Upgrade description","data-autofocus":true,class:"modal-input"});
+      inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); done({text:inp.value.trim()}) } });
+      return [el("h3",{text:s.upgrade?"Edit upgrade":"Mark as upgraded"}),
+        el("p",{text:"Optional: describe the upgrade with its new name or a short note. Leave it empty to just mark the room as upgraded."}),
+        inp,
+        el("div",{class:"acts"},
+          el("button",{class:"btn",type:"button",text:"Cancel",onclick:()=>done(null)}),
+          el("button",{class:"btn primary",type:"button",text:"Save",onclick:()=>done({text:inp.value.trim()})}))];
+    });
+    if(!res) return;
+    s.upgrade = {text:res.text, day: s.upgrade&&s.upgrade.day ? s.upgrade.day : (P.currentDay||null), at: Date.now()};
+    save(); render();
+  };
+  if(!s.upgrade) return el("div",{class:"upg-bar"},el("button",{class:"btn ghost sm",type:"button",text:"Mark as upgraded",onclick:edit}));
+  return el("div",{class:"upg-bar on"},
+    el("span",{class:"upg-tx"},el("span",{class:"label",text:"Upgrade"}),
+      el("span",{text:(s.upgrade.text||"Upgraded")+(s.upgrade.day?` · day ${s.upgrade.day}`:"")})),
+    el("span",{class:"tools"},
+      el("button",{class:"btn ghost sm",type:"button",text:"Edit",onclick:edit}),
+      el("button",{class:"btn ghost sm danger",type:"button",text:"Remove",onclick:async()=>{
+        if(!await confirmBox({title:"Remove upgrade?",body:`${r.name} will no longer be marked as upgraded.`,ok:"Remove",danger:true})) return;
+        delete s.upgrade; save(); render(); }})));
 }
 
 // ---------- Room ----------
@@ -1077,12 +1156,20 @@ function renderRoom(r){
   view.replaceChildren();
   const wrap = el("div",{style:roomVars(r)+";display:flex;flex-direction:column;gap:16px"});
   wrap.append(el("div",{class:"backrow"},el("a",{class:"btn ghost",href:"#",text:"← Home"})));
+  const sn = secretNotice(r, s);
+  if(sn) wrap.append(sn.el);
+  if(sn && sn.gate){
+    wrap.append(el("div",{class:"foot"},el("a",{class:"btn ghost",href:"#",text:"Not now, back home"})));
+    view.append(wrap); return;
+  }
 
   const card = el("article",{class:"panel"},
     el("div",{class:"card-head"+(r.slug==="aquarium"?" aq":"")},
       el("div",{class:"row"},el("span",{class:"kind",text:r.slug==="aquarium"?"Blueprint · every colour":c.label}),
         el("span",{class:"num",text:r.n?`№ ${pad(r.n)}`:CAT[r.cat].place?"":"Outside the house"})),
-      el("h2",{text:r.name}), el("span",{class:"plan",html:planSvg(r)})),
+      el("h2",{text:r.name}), el("span",{class:"plan",html:planSvg(r)}),
+      s.upgrade ? el("span",{class:"upg-badge",text:s.upgrade.text?`Upgraded: ${s.upgrade.text}`:"Upgraded"}) : null),
+    upgradeBar(r, s),
     listSec(r,"todos","To-dos","Nothing on the list yet. Add what you still need to do or remember here.","New to-do"),
     listSec(r,"found","Found","Nothing found yet. Add items, codes or clues you found here.","What did you find?"),
     notesSec(r));

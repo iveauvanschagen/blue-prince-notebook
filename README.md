@@ -14,6 +14,8 @@ A small mobile web app for keeping notes per room while playing Blue Prince. Ope
 - Past days: per item or in bulk, make it "always" or delete it
 - Rooms page with search, colour filters and sorting
 - A sealed hint per room, opened only after confirming, with a deeper second hint once the first is open
+- Mark a room as upgraded, optionally with its new name or a short note, shown on the room and in the room list
+- Secret rooms get a stop-sign style label; when the room that unlocks them is not in your notebook yet (not named, to avoid spoilers), the page stays folded until you confirm
 - Delete a room including all its notes
 
 ## Usage
