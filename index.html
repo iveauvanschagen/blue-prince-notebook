@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0c1d3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BP Notebook">
+<title>Blue Prince Notebook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@500;700&family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column on drafting paper, phone first. Home = current day, room search, to-do focus, your rooms. Room = floorplan card + to-dos, finds, notes, sealed hint. */
+:root{
+  --bg:#eef2f7; --grid:rgba(40,80,150,.08); --paper:#ffffff; --ink:#14284a; --muted:#56678a;
+  --line:#c9d4e4; --accent:#2a5bb8; --on-accent:#ffffff; --danger:#b8322c; --overlay:rgba(10,20,40,.55);
+  --c-blue:#3f72cc; --c-purple:#8657c4; --c-orange:#d9792b; --c-green:#3e9152; --c-yellow:#c9a21f;
+  --c-red:#c7413b; --c-black:#1d1d22; --c-outer:#8a7757;
+  --on-color:#ffffff; --on-yellow:#2a2108;
+  --f-display:"Cormorant SC","Cormorant Garamond",Georgia,serif;
+  --f-body:"Spectral",Georgia,"Times New Roman",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --tap:44px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1d3a; --grid:rgba(150,190,255,.07); --paper:#122849; --ink:#e7eef9; --muted:#a3b5d3;
+  --line:#2a456f; --accent:#8fb4ff; --on-accent:#0c1d3a; --danger:#ff8a80; --overlay:rgba(0,0,0,.65);
+  --c-black:#2a2a33; --c-yellow:#d6b02c; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0c1d3a; --grid:rgba(150,190,255,.07); --paper:#122849; --ink:#e7eef9; --muted:#a3b5d3;
+  --line:#2a456f; --accent:#8fb4ff; --on-accent:#0c1d3a; --danger:#ff8a80; --overlay:rgba(0,0,0,.65);
+  --c-black:#2a2a33; --c-yellow:#d6b02c; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;min-height:100vh;background-color:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+.wrap{max-width:680px;margin:0 auto;padding-block:16px 72px;
+  padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;text-wrap:balance;margin:0;letter-spacing:.02em}
+.label{font-family:var(--f-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+button,input,textarea{font:inherit;color:inherit}
+input,textarea{font-size:17px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:inherit}
+
+.btn{min-height:var(--tap);border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:0 14px;cursor:pointer;
+  font-family:var(--f-mono);font-size:14px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;text-decoration:none}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent);font-weight:500}
+.btn.room{background:var(--rc);border-color:var(--rc);color:var(--rt);font-weight:500}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--ink)}
+.btn.danger{color:var(--danger)}
+.btn.danger.solid{background:var(--danger);border-color:var(--danger);color:var(--paper)}
+.btn.sq{width:var(--tap);padding:0;font-size:20px}
+.btn.sm{min-height:36px;font-size:13px;padding:0 10px}
+
+/* Top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{display:flex;flex-direction:column;text-decoration:none;color:inherit;line-height:1}
+.brand h1{font-size:28px}
+.brand .label{font-size:10px;margin-top:4px}
+.daybox{display:flex;align-items:center;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:3px}
+.daybox .btn{border-color:transparent;min-height:40px;width:40px}
+.daynum{min-width:72px;text-align:center;border:0;background:transparent;cursor:pointer;padding:0 4px;line-height:1.1}
+.daynum .label{display:block;font-size:10px}
+.daynum b{font-family:var(--f-display);font-size:26px}
+.daynum.unset b{font-size:15px;font-family:var(--f-mono);font-weight:500}
+
+/* Search */
+.search{display:flex;flex-direction:column;gap:8px}
+.search h2{font-size:clamp(28px,7vw,40px);line-height:1.05}
+.search p{margin:0;color:var(--muted);font-size:15px}
+.search form{display:flex;gap:8px}
+.search input{flex:1;min-width:0;min-height:52px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-family:var(--f-display);font-size:22px;font-weight:500}
+.err{color:var(--danger);font-size:15px;min-height:1.4em;margin:0}
+
+/* Panels */
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.sec{display:flex;flex-direction:column;gap:10px;padding:16px}
+.sec + .sec{border-top:1px solid var(--line)}
+.sec-h{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.sec-h h3{font-size:24px}
+.tools{display:flex;align-items:center;gap:4px}
+.count{font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted);font-size:15px;margin:0}
+.muted em{font-style:italic}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px}
+.tab{flex:1;min-height:40px;border:0;border-radius:7px;background:transparent;cursor:pointer;font-family:var(--f-mono);font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:6px}
+.tab[aria-selected="true"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.tab .n{font-variant-numeric:tabular-nums;font-size:12px;opacity:.8}
+.tab.warn .n{color:var(--danger);opacity:1;font-weight:500}
+
+/* Item lists */
+.list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.item:last-child{border-bottom:0}
+.check{position:relative;width:var(--tap);height:var(--tap);flex:none;margin:-4px -6px -4px -8px;display:grid;place-items:center;cursor:pointer}
+.check input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.check span{width:24px;height:24px;border:2px solid var(--muted);border-radius:6px;display:grid;place-items:center}
+.check input:checked + span{background:var(--rc,var(--accent));border-color:var(--rc,var(--accent))}
+.check input:checked + span::after{content:"";width:6px;height:12px;border:solid var(--rt,var(--on-accent));border-width:0 3px 3px 0;transform:translateY(-2px) rotate(45deg)}
+.check input:focus-visible + span{outline:2px solid var(--accent);outline-offset:2px}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--rc);margin:9px 6px 0 2px;flex:none}
+.body{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;cursor:pointer;padding-top:4px;border:0;background:transparent;text-align:left}
+.body .t{overflow-wrap:anywhere;white-space:pre-wrap}
+.item.done .t{text-decoration:line-through;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.chip{font-family:var(--f-mono);font-size:12px;padding:2px 8px;border-radius:99px;border:1px solid var(--line);color:var(--muted);text-decoration:none;line-height:1.4}
+.chip.day{border-color:var(--rc,var(--accent));color:var(--ink)}
+.chip.past{border-color:var(--danger);color:var(--danger)}
+.chip.room{background:var(--rc);border-color:var(--rc);color:var(--rt)}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.col{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.col .body{width:100%}
+
+/* Add row */
+.add{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap}
+.add input{flex:1 1 160px;min-width:0;min-height:var(--tap);padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.add .btns{display:flex;gap:6px;flex:0 0 auto}
+.add-note{display:flex;flex-direction:column;gap:8px}
+.add-note .btns{display:flex;justify-content:flex-end}
+textarea{width:100%;min-height:88px;resize:vertical;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);line-height:1.5}
+
+/* Edit form */
+.edit{flex:1;display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--rc,var(--accent));border-radius:8px;background:var(--bg);margin:4px 0}
+.edit input[type=text]{width:100%;min-height:var(--tap);padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.edit textarea{background:var(--paper)}
+.edit .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.edit .acts{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.edit .acts div{display:flex;gap:6px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--paper)}
+.seg button{min-height:40px;border:0;background:transparent;padding:0 12px;font-family:var(--f-mono);font-size:13px;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-checked="true"]{background:var(--rc,var(--accent));color:var(--rt,var(--on-accent))}
+.stepper{display:inline-flex;align-items:center;gap:4px}
+.stepper input{width:64px;min-height:40px;border:1px solid var(--line);border-radius:8px;background:var(--paper);text-align:center;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.stepper .btn{min-height:40px;width:40px}
+
+/* Visited rooms */
+.rooms{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tile{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;background:var(--paper);text-decoration:none;color:inherit;overflow:hidden;min-height:60px}
+.tile:hover{border-color:var(--accent)}
+.tile .sw{width:8px;flex:none;background:var(--rc)}
+.tile .tx{padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.tile .nm{font-family:var(--f-display);font-weight:700;font-size:19px;line-height:1.1}
+.tile .mt{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.empty{border:1px dashed var(--line);border-radius:8px;padding:14px;color:var(--muted);font-size:15px}
+
+/* Room card */
+.card-head{background:var(--rc);color:var(--rt);padding:16px;display:flex;flex-direction:column;gap:4px;position:relative}
+.card-head::after{content:"";position:absolute;inset:7px;border:1px solid currentColor;opacity:.35;border-radius:5px;pointer-events:none}
+.card-head .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.card-head .num{font-family:var(--f-mono);font-size:13px;letter-spacing:.12em}
+.card-head .cat{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.card-head h2{font-size:clamp(36px,10vw,52px);line-height:1}
+.aq{background:linear-gradient(90deg,var(--c-blue),var(--c-purple),var(--c-orange),var(--c-green),var(--c-yellow),var(--c-red))}
+.note-stamp{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+
+.hint{display:flex;flex-direction:column;gap:10px}
+.seal{display:flex;align-items:center;gap:12px}
+.lock{width:44px;height:44px;border-radius:50%;background:var(--rc);color:var(--rt);display:grid;place-items:center;flex:none}
+.seal p{margin:0;flex:1;color:var(--muted);font-size:15px}
+.hint .text{margin:0;font-size:17px}
+.src{font-size:13px;color:var(--muted);margin:0}
+.backrow{display:flex;justify-content:space-between;align-items:center}
+.foot{display:flex;justify-content:center}
+
+/* Modal */
+.ov{position:fixed;inset:0;background:var(--overlay);display:flex;align-items:flex-end;justify-content:center;z-index:50;
+  padding:16px max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+@media (min-width:560px){.ov{align-items:center}}
+.modal{background:var(--paper);border:1px solid var(--line);border-radius:14px;max-width:420px;width:100%;padding:20px;display:flex;flex-direction:column;gap:14px}
+.modal h3{font-size:26px}
+.modal p{margin:0;color:var(--muted)}
+.modal .acts{display:flex;gap:8px}
+.modal .acts .btn{flex:1}
+.bigday{display:flex;align-items:center;justify-content:center;gap:10px}
+.bigday .btn{width:56px;min-height:56px;font-size:26px}
+.bigday input{width:110px;min-height:64px;text-align:center;font-family:var(--f-display);font-weight:700;font-size:40px;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.quickdays{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.quickdays .btn{min-height:36px;font-size:13px}
+
+@media (prefers-reduced-motion:no-preference){.modal{animation:up .18s ease-out}@keyframes up{from{transform:translateY(10px);opacity:.6}to{transform:none;opacity:1}}}
+@media (max-width:380px){.add .btns .btn{padding:0 10px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="brand" href="#" aria-label="Home"><h1>Blue Prince</h1><span class="label">Notebook</span></a>
+    <div class="daybox" id="daybox"></div>
+  </header>
+  <main id="view"></main>
+</div>
+<div class="ov" id="ov" hidden><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
+
+<script>
+// ---------- Rooms ----------
+const CAT = {
+  blue:{label:"Blueprint",c:"--c-blue"}, purple:{label:"Bedroom",c:"--c-purple"},
+  orange:{label:"Hallway",c:"--c-orange"}, green:{label:"Green room",c:"--c-green"},
+  yellow:{label:"Shop",c:"--c-yellow",dark:true}, red:{label:"Red room",c:"--c-red"},
+  black:{label:"Blackprint",c:"--c-black"}, outer:{label:"Outer room",c:"--c-outer"}
+};
+// [number, name, category, hint]
+const R = [
+[1,"The Foundation","blue","Once drafted, it stays in the same spot every day. Pick that spot carefully, ideally central on a route you use often. Also check what lies below ground."],
+[2,"Entrance Hall","blue","Your starting point every day. Read everything that hangs or lies here: details can change from day to day and come back later."],
+[3,"Spare Room","blue","A plain room with no effect, but a good candidate for an upgrade. Keep an eye out for upgrade disks."],
+[4,"Rotunda","blue","Use the lever to rotate the room so its doors point another way. Handy to open up a dead end."],
+[5,"Parlor","blue","Three boxes with statements. At least one box only tells the truth, at least one only lies, and only one holds the prize. Solve it with logic and read the rules on the wall."],
+[6,"Billiard Room","blue","A dartboard maths puzzle. The ring colours stand for operations; the instructions hang on the wall. Work from the inside out."],
+[7,"Gallery","blue","A puzzle room with paintings and an answer field. Each painting points to a word: mind the titles and details. Only available after you reach Room 46."],
+[8,"Room 8","blue","This room is locked and needs a special key. Look around the estate for the key marked 8."],
+[9,"Closet","blue","A dead end, but it gives you a few items. Nice when you need a key or a shovel."],
+[10,"Walk-In Closet","blue","More items than the regular Closet. Good for restocking."],
+[11,"Attic","blue","A dead end packed with items. Draft it when you need supplies and the route does not matter."],
+[12,"Storeroom","blue","Gives a key, a gem and a coin. A dead end, so place it where you did not want to go anyway."],
+[13,"Nook","blue","Cheap and gives a key. Check what lies on the reading shelf."],
+[14,"Garage","blue","The garage door opens when it has power. Find the right switch in the Utility Closet; there is a way outside behind it."],
+[15,"Music Room","blue","Study the sheet music and what stands in the room. Musical notes are also letters, which can help elsewhere."],
+[16,"Locker Room","blue","Spreads keys throughout the house. Good when you expect many locked doors."],
+[17,"Den","blue","Gives a gem. A simple room to top up your gems."],
+[18,"Wine Cellar","blue","Gives three gems but is a dead end. Draft it at the edge of the house."],
+[19,"Trophy Room","blue","Each trophy stands for an achievement. Read the plaques for ideas of what you can still accomplish."],
+[20,"Ballroom","blue","Entering sets your gems to a fixed amount. Great when you have almost none, a waste when you have many."],
+[21,"Pantry","blue","Gives coins and fruit. Eat fruit for extra steps."],
+[22,"Rumpus Room","blue","Gives coins. Nice right before drafting a shop."],
+[23,"Vault","blue","Lots of coins at once, but a dead end. Ideal when you want to buy something expensive."],
+[24,"Office","blue","Use the desk to spread coins through the house. Look around: there is more here than you think."],
+[25,"Drawing Room","blue","Gives you a free redraw of floorplans. Draft it early for better choices."],
+[26,"Study","blue","Spend gems here to redraw floorplans. Handy when you are hunting for a specific room."],
+[27,"Library","blue","Makes rarer rooms more likely. Read the books: many hold clues for puzzles and the story."],
+[28,"Chamber of Mirrors","blue","Lets you draft rooms that are already in the house again. Combine with rooms that give items or gems."],
+[29,"The Pool","blue","Adds the Locker Room, Sauna and Pump Room to your draft pool. Draft it early."],
+[30,"Drafting Studio","blue","Pick a new room to add permanently to your pool. Think about what you miss most."],
+[31,"Utility Closet","blue","The breaker box. Each switch powers a different place. Try combinations and watch what changes in the Garage, Darkroom and Security."],
+[32,"Boiler Room","blue","Powers other rooms, such as the Laboratory. Make sure the connection runs to the room you need."],
+[33,"Pump Room","blue","Controls the water level in and around the house. See what happens to the fountain on the grounds when you drain it."],
+[34,"Security","blue","Shows your estate inventory and controls security. Study the terminal closely."],
+[35,"Workshop","blue","Combine items into new tools. The drawings on the wall show which combinations work."],
+[36,"Laboratory","blue","Run experiments that change the rules for a day. Needs power from the Boiler Room."],
+[37,"Sauna","blue","Gives you extra steps at the start of the next day."],
+[38,"Coat Check","blue","Store one item and pick it up again on another day. That way you carry something into a later run."],
+[39,"Mail Room","blue","A package arrives the day after you draft it. Read the letters that arrive here: they tell the story."],
+[40,"Freezer","blue","Changes how your resources behave for the rest of the day. Read the effect carefully before drafting it."],
+[41,"Dining Room","blue","Serves a meal for extra steps, but only when the room sits high in the house (rank 8)."],
+[42,"Observatory","blue","Look at the stars and constellations. One of Randolph's letters says a lost floorplan is hidden here."],
+[43,"Conference Room","blue","Items spread through the house end up here. Strong with the Office or Locker Room."],
+[44,"Aquarium","blue","Counts as every room colour at once. Useful for rooms that give bonuses per colour."],
+[45,"Antechamber","blue","The room before Room 46 on the top rank. Its doors open with levers found elsewhere on the estate; pay special attention to green rooms."],
+[46,"Room 46","blue","The goal of the game. You reach it through the Antechamber on rank 9."],
+[47,"Bedroom","purple","Gives extra steps every time you walk in. Draft it on a spot you pass often."],
+[48,"Boudoir","purple","A bedroom with clothes and often items. Pairs well with Her Ladyship's Chamber."],
+[49,"Guest Bedroom","purple","Gives extra steps. A good rest stop halfway through the house."],
+[50,"Nursery","purple","Gives steps for each bedroom you draft afterwards. So draft it early."],
+[51,"Servant's Quarters","purple","Gives keys per bedroom in the house. The more bedrooms, the better."],
+[52,"Bunk Room","purple","Counts as two bedrooms. Strong with the Nursery and Servant's Quarters."],
+[53,"Her Ladyship's Chamber","purple","Gives a bonus when you draft a Boudoir or Walk-In Closet afterwards."],
+[54,"Master Bedroom","purple","Gives steps based on the number of rooms in the house. Worth most late in a run."],
+[55,"Hallway","orange","A simple hallway with several doors. Ideal for keeping your options open."],
+[56,"West Wing Hall","orange","A hallway that takes you towards the west side of the house. Handy for working towards the edge."],
+[57,"East Wing Hall","orange","A hallway that takes you towards the east side of the house. Handy for working towards the edge."],
+[58,"Corridor","orange","A straight hallway whose door is never locked. Safe for saving keys."],
+[59,"Passageway","orange","Four doors at once. Costs gems but gives you many directions."],
+[60,"Secret Passage","orange","Lets you choose the colour of your next drafted room."],
+[61,"Foyer","orange","While the Foyer is in the house, hallway doors are not locked."],
+[62,"Great Hall","orange","A large hall with many doors, several of them locked. Bring keys."],
+[63,"Terrace","green","Green rooms no longer cost gems while the Terrace is in the house."],
+[64,"Patio","green","Spreads gems across the green rooms in the house."],
+[65,"Courtyard","green","A courtyard with several exits. There may be something to dig up: bring a shovel."],
+[66,"Cloister","green","A cloister with four doors. Look around carefully, statues included."],
+[67,"Veranda","green","Raises the chance of items in green rooms."],
+[68,"Greenhouse","green","Raises the chance of drafting green rooms. Look around inside the greenhouse too."],
+[69,"Morning Room","green","Gives you extra gems the next day."],
+[70,"Secret Garden","green","Only opens with the Secret Garden Key. Inside waits a puzzle connected to the Antechamber."],
+[71,"Commissary","yellow","Sells special items. Through Security you can order an extra item."],
+[72,"Kitchen","yellow","Sells food for extra steps."],
+[73,"Locksmith","yellow","Sells keys, special ones included."],
+[74,"Showroom","yellow","Expensive, unusual items. Save coins before drafting it."],
+[75,"Laundry Room","yellow","Swaps your resources around. Think before you do it: it can work against you."],
+[76,"Bookshop","yellow","Sells books. Some hold important clues."],
+[77,"The Armory","yellow","Sells special equipment. Also check what hangs on the walls."],
+[78,"Gift Shop","yellow","Sells souvenirs. Some have a lasting effect."],
+[79,"Lavatory","red","A dead end with no benefit. Draft it only when nothing better is offered."],
+[80,"Chapel","red","Costs a coin every time you enter. Do look at what the chapel shows."],
+[81,"Maid's Chamber","red","Also counts as a bedroom, but makes items in the house less likely."],
+[82,"Archives","red","Floorplans you draft from here stay hidden until you choose."],
+[83,"Gymnasium","red","Costs steps every time you enter. Keep it off your main route."],
+[84,"Darkroom","red","You cannot see floorplans when drafting. Power from the Utility Closet gets around this."],
+[85,"Weight Room","red","Costs half your remaining steps on entry. Draft it early or not at all."],
+[86,"Furnace","red","Raises the chance of red rooms for the rest of the run."],
+[87,"Dovecote","blue","An addition from the Drafting Studio. Read its effect when drafting and look around among the doves."],
+[88,"The Kennel","blue","An addition from the Drafting Studio. Read its effect when drafting; the kennel helps you in its own way."],
+[89,"Clock Tower","blue","An addition from the Drafting Studio. Time matters here: watch the clock."],
+[90,"Classroom","blue","Look at what is on the board. The Schoolhouse outside adds several Classrooms to your pool."],
+[91,"Solarium","green","A green addition from the Drafting Studio. Read its effect carefully when drafting."],
+[92,"Dormitory","purple","A dormitory from the Drafting Studio. Gives steps in combination with drafting rooms."],
+[93,"Vestibule","orange","A hallway addition from the Drafting Studio. Check which doors it opens."],
+[94,"Casino","yellow","Gamble with your coins. It can pay off big, but you can also lose it all."],
+[95,"Planetarium","blue","A found floorplan with an effect for tomorrow. A dead end, so plan its spot."],
+[96,"Mechanarium","blue","A found, mechanical floorplan. Look at the machines and what they need."],
+[97,"Treasure Trove","black","A blackprint full of rewards. Found through a lost floorplan somewhere on the estate."],
+[98,"Throne Room","black","A rare and expensive blackprint. Pay attention to what the throne tells you."],
+[99,"Tunnel","orange","A found hallway that also works as a drafting room. Handy for building on in one direction."],
+[100,"Conservatory","green","A found green drafting room. Influences which rooms you draw."],
+[101,"Lost & Found","red","A found red room. See what was left behind."],
+[102,"Closed Exhibit","red","A rare found red room. Notice what should have been on display."],
+[null,"Toolshed","outer","An outer room with tools and items."],
+[null,"Shelter","outer","Protects you from the downsides of the next red rooms."],
+[null,"Schoolhouse","outer","Adds several Classrooms to your draft pool."],
+[null,"Shrine","outer","A shrine. See what you can offer and what you get back."],
+[null,"Root Cellar","outer","Green rooms get more dig spots. Bring a shovel."],
+[null,"Hovel","outer","Special floorplans cost steps instead of gems."],
+[null,"Trading Post","outer","Trade items for other items here."],
+[null,"Tomb","outer","A tomb. Read the inscriptions carefully."]
+];
+const norm = s => s.toLowerCase().replace(/[’']/g,"").replace(/&/g," and ").replace(/^the\s+/,"").replace(/[^a-z0-9]+/g," ").trim();
+const slugOf = s => norm(s).replace(/ /g,"-");
+const ROOMS = R.map(([n,name,cat,hint]) => ({n,name,cat,hint,slug:slugOf(name)}));
+const BY_SLUG = Object.fromEntries(ROOMS.map(r=>[r.slug,r]));
+const BY_NORM = Object.fromEntries(ROOMS.map(r=>[norm(r.name),r]));
+BY_NORM["lost found"] = BY_SLUG["lost-and-found"];
+
+// ---------- Storage (this browser) ----------
+const KEY = "bp-notebook-v2";
+let data = {rooms:{}, prefs:{currentDay:null, hideDone:false, tab:"today"}};
+try{
+  const saved = JSON.parse(localStorage.getItem(KEY)||"null");
+  if(saved && saved.rooms) data = {rooms:saved.rooms, prefs:{...data.prefs, ...(saved.prefs||{})}};
+}catch(e){}
+const P = data.prefs;
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(data)) }catch(e){} }
+function room(slug){
+  let s = data.rooms[slug];
+  if(!s) s = data.rooms[slug] = {todos:[],found:[],notes:[],hintOpen:false,visitedAt:0};
+  if(typeof s.notes === "string") s.notes = s.notes.trim() ? [{id:uid(),text:s.notes,day:null,created:Date.now()}] : [];
+  return s;
+}
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function maxDay(){
+  let m = P.currentDay||0;
+  Object.values(data.rooms).forEach(s=>["todos","found","notes"].forEach(k=>(Array.isArray(s[k])?s[k]:[]).forEach(it=>{ if(it.day>m) m=it.day })));
+  return m||1;
+}
+const isPast = it => it.scope==="today" && it.day && P.currentDay && it.day < P.currentDay;
+
+// ---------- Helpers ----------
+const view = document.getElementById("view");
+const el = (tag, attrs={}, ...kids) => {
+  const e = document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs)){
+    if(v===false || v==null) continue;
+    if(k==="class") e.className=v; else if(k==="text") e.textContent=v; else if(k==="html") e.innerHTML=v;
+    else if(k.startsWith("on")) e.addEventListener(k.slice(2),v); else if(k==="value") e.value=v;
+    else e.setAttribute(k, v===true?"":v);
+  }
+  kids.flat().forEach(k=>{ if(k!=null && k!==false) e.append(k.nodeType?k:document.createTextNode(k)) });
+  return e;
+};
+const roomVars = r => `--rc:var(${CAT[r.cat].c});--rt:${CAT[r.cat].dark?"var(--on-yellow)":"var(--on-color)"}`;
+const fmtDate = t => t ? new Date(t).toLocaleDateString("en-GB",{day:"numeric",month:"short"}) : "";
+const pad = n => String(n).padStart(3,"0");
+const LOCK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+// ---------- Modals ----------
+const ov = document.getElementById("ov"), modal = document.getElementById("modal");
+let modalResolve = null, lastFocus = null;
+function openModal(build){
+  return new Promise(res=>{
+    lastFocus = document.activeElement;
+    modalResolve = res;
+    modal.replaceChildren(...build(v=>closeModal(v)));
+    ov.hidden = false;
+    const f = modal.querySelector("[data-autofocus]") || modal.querySelector("button");
+    if(f) f.focus();
+  });
+}
+function closeModal(v){
+  if(ov.hidden) return;
+  ov.hidden = true;
+  const r = modalResolve; modalResolve = null;
+  if(lastFocus && lastFocus.isConnected) lastFocus.focus();
+  if(r) r(v);
+}
+ov.addEventListener("click",e=>{ if(e.target===ov) closeModal(null) });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !ov.hidden) closeModal(null) });
+
+function confirmBox({title, body, ok, danger}){
+  return openModal(done=>[
+    el("h3",{text:title}), el("p",{text:body}),
+    el("div",{class:"acts"},
+      el("button",{class:"btn",type:"button",text:"Cancel","data-autofocus":true,onclick:()=>done(false)}),
+      el("button",{class:"btn "+(danger?"danger solid":"primary"),type:"button",text:ok,onclick:()=>done(true)}))
+  ]).then(v=>!!v);
+}
+// Ask which day it is. Resolves the day number, or null when cancelled.
+function pickDay({title="What day is it?", body="Enter the day number shown in the game.", ok="Set day"}={}){
+  const start = P.currentDay || maxDay();
+  return openModal(done=>{
+    const inp = el("input",{type:"number",inputmode:"numeric",min:"1",value:String(start),"aria-label":"Day number","data-autofocus":true});
+    const set = v => inp.value = String(Math.max(1,v));
+    const cur = () => Math.max(1,parseInt(inp.value,10)||1);
+    inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); done(cur()) } });
+    const quick = el("div",{class:"quickdays"});
+    const m = maxDay();
+    [...new Set([m, m+1, m+2].filter(d=>d>=1))].forEach(d=>quick.append(el("button",{class:"btn sm",type:"button",text:`Day ${d}`,onclick:()=>set(d)})));
+    return [el("h3",{text:title}), el("p",{text:body}),
+      el("div",{class:"bigday"},
+        el("button",{class:"btn",type:"button","aria-label":"Previous day",text:"−",onclick:()=>set(cur()-1)}),
+        inp,
+        el("button",{class:"btn",type:"button","aria-label":"Next day",text:"+",onclick:()=>set(cur()+1)})),
+      quick,
+      el("div",{class:"acts"},
+        el("button",{class:"btn",type:"button",text:"Cancel",onclick:()=>done(null)}),
+        el("button",{class:"btn primary",type:"button",text:ok,onclick:()=>done(cur())}))];
+  });
+}
+async function ensureDay(){
+  if(P.currentDay) return P.currentDay;
+  const d = await pickDay({body:"Items for today are stamped with the current day. You only need to set it once per day."});
+  if(d){ P.currentDay = d; save(); renderDay() }
+  return d;
+}
+
+// ---------- Current day (header) ----------
+function renderDay(){
+  const box = document.getElementById("daybox");
+  const has = !!P.currentDay;
+  box.replaceChildren(
+    el("button",{class:"btn",type:"button","aria-label":"Previous day",text:"−",disabled:!has||P.currentDay<=1,onclick:()=>{ P.currentDay=Math.max(1,P.currentDay-1); save(); render() }}),
+    el("button",{class:"daynum"+(has?"":" unset"),type:"button","aria-label":"Set current day",onclick:async()=>{
+      const d = await pickDay(); if(d){ P.currentDay=d; save(); render() } }},
+      el("span",{class:"label",text:"Day"}), el("b",{text:has?String(P.currentDay):"Set"})),
+    el("button",{class:"btn",type:"button","aria-label":"Next day",text:"+",onclick:async()=>{
+      if(!P.currentDay){ const d = await pickDay(); if(d){ P.currentDay=d; save(); render() } return }
+      P.currentDay++; save(); render() }}));
+}
+
+// ---------- Items (to-dos and finds) ----------
+const LABEL = {todos:{always:"Always"}, found:{always:"Always there"}};
+let editing = null; // "slug|key|id"
+
+function itemRow(slug, key, it, {showRoom=false, onChange}){
+  const r = BY_SLUG[slug], s = room(slug);
+  const isTodo = key==="todos";
+  const li = el("li",{class:"item"+(it.done?" done":""),style:roomVars(r)});
+  if(editing === `${slug}|${key}|${it.id}`){ li.append(editForm(slug,key,it,onChange)); return li }
+  if(isTodo){
+    li.append(el("label",{class:"check"},
+      el("input",{type:"checkbox",checked:!!it.done,"aria-label":`Done: ${it.text}`,onchange:e=>{ it.done=e.target.checked; save(); onChange() }}),
+      el("span",{"aria-hidden":"true"})));
+  } else li.append(el("span",{class:"dot","aria-hidden":"true"}));
+  const past = isPast(it);
+  const meta = el("span",{class:"meta"},
+    showRoom ? el("a",{class:"chip room",href:"#"+slug,onclick:e=>e.stopPropagation(),text:r.name}) : null,
+    it.scope==="today"
+      ? el("span",{class:"chip day"+(past?" past":""),text:`Day ${it.day}${past?" · past":""}`})
+      : el("span",{class:"chip",text:LABEL[key].always}));
+  const body = el("button",{class:"body",type:"button","aria-label":`Edit: ${it.text}`,onclick:()=>{ editing=`${slug}|${key}|${it.id}`; onChange(true) }},
+    el("span",{class:"t",text:it.text}), meta);
+  const col = el("div",{class:"col"},body);
+  if(past && !it.done){
+    col.append(el("div",{class:"quick"},
+      el("button",{class:"btn sm",type:"button",text:"Make always",onclick:()=>{ it.scope="always"; it.day=null; save(); onChange() }}),
+      el("button",{class:"btn sm danger",type:"button",text:"Delete",onclick:()=>{ s[key]=s[key].filter(x=>x.id!==it.id); save(); onChange() }})));
+  }
+  li.append(col);
+  return li;
+}
+
+function editForm(slug, key, it, onChange){
+  const s = room(slug);
+  let scope = it.scope||"always";
+  const text = el("input",{type:"text",value:it.text,"aria-label":"Text","data-edit":"1"});
+  const dayIn = el("input",{type:"number",inputmode:"numeric",min:"1",value:String(it.day||P.currentDay||maxDay()),"aria-label":"Day"});
+  const step = d => dayIn.value = String(Math.max(1,(parseInt(dayIn.value,10)||1)+d));
+  const stepper = el("span",{class:"stepper"},
+    el("button",{class:"btn",type:"button","aria-label":"Day down",text:"−",onclick:()=>step(-1)}), dayIn,
+    el("button",{class:"btn",type:"button","aria-label":"Day up",text:"+",onclick:()=>step(1)}));
+  stepper.hidden = scope!=="today";
+  const seg = el("span",{class:"seg",role:"radiogroup","aria-label":"When"});
+  [["always",LABEL[key].always],["today","One day"]].forEach(([v,l])=>{
+    const b = el("button",{type:"button",role:"radio","aria-checked":String(scope===v),text:l,onclick:()=>{
+      scope=v; seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-checked",String(x===b))); stepper.hidden = v!=="today" }});
+    seg.append(b);
+  });
+  const close = () => { editing=null; onChange() };
+  const form = el("form",{class:"edit",onsubmit:e=>{
+    e.preventDefault();
+    const t = text.value.trim(); if(!t){ text.focus(); return }
+    it.text=t; it.scope=scope; it.day = scope==="today" ? Math.max(1,parseInt(dayIn.value,10)||1) : null;
+    save(); close();
+  }},
+    text, el("div",{class:"row"},seg,stepper),
+    el("div",{class:"acts"},
+      el("button",{class:"btn ghost danger",type:"button",text:"Delete",onclick:()=>{ s[key]=s[key].filter(x=>x.id!==it.id); save(); close() }}),
+      el("div",{},el("button",{class:"btn",type:"button",text:"Cancel",onclick:close}),
+        el("button",{class:"btn primary",type:"submit",text:"Save"}))));
+  form.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.stopPropagation(); close() } });
+  return form;
+}
+
+function addRow(slug, key, placeholder, onChange){
+  const s = room(slug);
+  const inp = el("input",{type:"text",id:`add-${key}`,placeholder,"aria-label":placeholder,enterkeyhint:"done"});
+  const add = async scope => {
+    const t = inp.value.trim(); if(!t){ inp.focus(); return }
+    let day = null;
+    if(scope==="today"){ day = await ensureDay(); if(!day) return }
+    s[key].push({id:uid(),text:t,done:false,scope,day,created:Date.now()});
+    save(); onChange();
+    const again = document.getElementById(`add-${key}`); if(again) again.focus();
+  };
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); add("always") } });
+  return el("div",{class:"add"}, inp,
+    el("div",{class:"btns"},
+      el("button",{class:"btn",type:"button",text:"Always +",title:"Add, stays relevant",onclick:()=>add("always")}),
+      el("button",{class:"btn room",type:"button",text:P.currentDay?`Day ${P.currentDay} +`:"Today +",title:"Add for today only",onclick:()=>add("today")})));
+}
+
+const sortTodos = list => [...list.filter(t=>!t.done), ...list.filter(t=>t.done)];
+function hideToggle(doneCount, onChange){
+  if(!doneCount) return null;
+  return el("button",{class:"btn ghost sm",type:"button","aria-pressed":String(!!P.hideDone),
+    text:P.hideDone?`Show done (${doneCount})`:"Hide done",onclick:()=>{ P.hideDone=!P.hideDone; save(); onChange() }});
+}
+
+// ---------- Home ----------
+function renderHome(){
+  view.replaceChildren();
+  const rerender = () => render();
+
+  // Search
+  const err = el("p",{class:"err",role:"status"});
+  const input = el("input",{type:"text",placeholder:"e.g. Parlor",autocomplete:"off",autocapitalize:"words",spellcheck:"false","aria-label":"Room name",enterkeyhint:"go"});
+  view.append(el("section",{class:"search"},
+    el("h2",{text:"Which room did you draft?"}),
+    el("p",{text:"Type the exact room name as shown in the game. You only see rooms you have found yourself, no spoilers."}),
+    el("form",{onsubmit:e=>{
+      e.preventDefault();
+      const q = norm(input.value);
+      if(!q){ err.textContent="Type a room name first."; return }
+      const r = BY_NORM[q];
+      if(!r){ err.textContent=`No room called "${input.value.trim()}". Check the spelling as shown in the game.`; return }
+      location.hash = r.slug;
+    }}, input, el("button",{class:"btn primary",type:"submit",text:"Open"})), err));
+
+  // To-do focus
+  const all = [];
+  Object.entries(data.rooms).forEach(([slug,s])=>{ if(BY_SLUG[slug]) (s.todos||[]).forEach(it=>all.push({slug,it})) });
+  const groups = {
+    today: all.filter(x=>x.it.scope==="today" && P.currentDay && x.it.day===P.currentDay),
+    anytime: all.filter(x=>(x.it.scope||"always")==="always"),
+    past: all.filter(x=>isPast(x.it) && !x.it.done)
+  };
+  const openN = g => g.filter(x=>!x.it.done).length;
+  let tab = P.tab in groups ? P.tab : "today";
+  const panel = el("section",{class:"panel"});
+  const sec = el("div",{class:"sec"});
+  const shownGroup = tab==="past" ? groups.past : groups[tab];
+  const doneN = tab==="past" ? 0 : shownGroup.filter(x=>x.it.done).length;
+  sec.append(el("div",{class:"sec-h"},el("h3",{text:"To-dos"}),el("div",{class:"tools"},hideToggle(doneN,rerender))));
+  const tabs = el("div",{class:"tabs",role:"tablist"});
+  [["today",P.currentDay?`Day ${P.currentDay}`:"Today"],["anytime","Always"],["past","Past days"]].forEach(([k,l])=>{
+    tabs.append(el("button",{class:"tab"+(k==="past"&&groups.past.length?" warn":""),role:"tab",type:"button","aria-selected":String(tab===k),onclick:async()=>{
+      if(k==="today" && !P.currentDay){ if(!await ensureDay()) return }
+      P.tab=k; save(); render();
+    }}, l, el("span",{class:"n",text:String(openN(groups[k]))})));
+  });
+  sec.append(tabs);
+
+  if(tab==="today" && !P.currentDay){
+    sec.append(el("p",{class:"muted",text:"Set the current day to see what you planned for today."}),
+      el("button",{class:"btn primary",type:"button",text:"Set current day",onclick:async()=>{ if(await ensureDay()) render() }}));
+  } else {
+    let list = tab==="past" ? groups.past : [...shownGroup.filter(x=>!x.it.done), ...shownGroup.filter(x=>x.it.done)];
+    if(P.hideDone && tab!=="past") list = list.filter(x=>!x.it.done);
+    if(!list.length){
+      const msg = {today:"Nothing planned for today. Add a to-do in a room with the Day + button.",
+        anytime:"No open to-dos that always apply.", past:"No leftovers from earlier days."}[tab];
+      sec.append(el("p",{class:"muted",text: shownGroup.length && P.hideDone ? "Everything here is done." : msg}));
+    } else {
+      const ul = el("ul",{class:"list"});
+      list.forEach(({slug,it})=>ul.append(itemRow(slug,"todos",it,{showRoom:true,onChange:rerender})));
+      sec.append(ul);
+      if(tab==="past") sec.append(el("div",{class:"quick"},
+        el("button",{class:"btn sm",type:"button",text:"Make all always",onclick:()=>{ list.forEach(({it})=>{ it.scope="always"; it.day=null }); save(); render() }}),
+        el("button",{class:"btn sm danger",type:"button",text:"Delete all",onclick:async()=>{
+          if(!await confirmBox({title:"Delete past to-dos?",body:`This removes ${list.length} to-do${list.length>1?"s":""} from earlier days.`,ok:"Delete",danger:true})) return;
+          list.forEach(({slug,it})=>{ const s=room(slug); s.todos=s.todos.filter(x=>x.id!==it.id) }); save(); render() }})));
+    }
+  }
+  panel.append(sec);
+  view.append(panel);
+
+  // Your rooms
+  const visited = ROOMS.filter(r=>data.rooms[r.slug] && data.rooms[r.slug].visitedAt).sort((a,b)=>data.rooms[b.slug].visitedAt-data.rooms[a.slug].visitedAt);
+  const rs = el("section",{class:"search"});
+  rs.append(el("div",{class:"sec-h"},el("h3",{text:"Your rooms"}),el("span",{class:"count",text:visited.length?String(visited.length):""})));
+  if(!visited.length) rs.append(el("div",{class:"empty",text:"No rooms yet. Open your first room above, for example the Entrance Hall."}));
+  else {
+    const ul = el("ul",{class:"rooms"});
+    visited.forEach(r=>{
+      const s = room(r.slug), open = s.todos.filter(t=>!t.done).length;
+      const meta = [r.n?`№ ${pad(r.n)}`:CAT[r.cat].label, open?`${open} to do`:""].filter(Boolean).join(" · ");
+      ul.append(el("li",{},el("a",{class:"tile",href:"#"+r.slug,style:roomVars(r)},
+        el("span",{class:"sw"+(r.slug==="aquarium"?" aq":"")}),
+        el("span",{class:"tx"},el("span",{class:"nm",text:r.name}),el("span",{class:"mt",text:meta})))));
+    });
+    rs.append(ul);
+  }
+  view.append(rs);
+}
+
+// ---------- Room ----------
+function listSec(r, key, title, empty, placeholder){
+  const s = room(r.slug), isTodo = key==="todos";
+  const rerender = () => render();
+  const sec = el("div",{class:"sec"});
+  const doneN = isTodo ? s.todos.filter(t=>t.done).length : 0;
+  sec.append(el("div",{class:"sec-h"},el("h3",{text:title}),
+    el("div",{class:"tools"},
+      s[key].length ? el("span",{class:"count",text:isTodo?`${doneN}/${s[key].length}`:String(s[key].length)}) : null,
+      isTodo ? hideToggle(doneN,rerender) : null)));
+  let list = isTodo ? sortTodos(s[key]) : [...s[key]];
+  if(isTodo && P.hideDone) list = list.filter(t=>!t.done);
+  if(!s[key].length) sec.append(el("p",{class:"muted",text:empty}));
+  else if(!list.length) sec.append(el("p",{class:"muted",text:"Everything is done."}));
+  if(list.length){
+    const ul = el("ul",{class:"list"});
+    list.forEach(it=>ul.append(itemRow(r.slug,key,it,{onChange:rerender})));
+    sec.append(ul);
+  }
+  sec.append(addRow(r.slug,key,placeholder,rerender));
+  return sec;
+}
+
+function notesSec(r){
+  const s = room(r.slug);
+  const sec = el("div",{class:"sec"});
+  sec.append(el("div",{class:"sec-h"},el("h3",{text:"Notes"}),s.notes.length?el("span",{class:"count",text:String(s.notes.length)}):null));
+  if(!s.notes.length) sec.append(el("p",{class:"muted",text:"No notes yet. Each note gets a day stamp so you know when you wrote it."}));
+  else {
+    const ul = el("ul",{class:"list"});
+    [...s.notes].sort((a,b)=>(b.day||0)-(a.day||0)||b.created-a.created).forEach(n=>{
+      const li = el("li",{class:"item",style:roomVars(r)});
+      if(editing === `${r.slug}|notes|${n.id}`){
+        const ta = el("textarea",{"aria-label":"Note","data-edit":"1"}); ta.value = n.text;
+        const dayIn = el("input",{type:"number",inputmode:"numeric",min:"1",value:String(n.day||P.currentDay||maxDay()),"aria-label":"Day"});
+        const step = d => dayIn.value = String(Math.max(1,(parseInt(dayIn.value,10)||1)+d));
+        const close = () => { editing=null; render() };
+        const f = el("form",{class:"edit",onsubmit:e=>{ e.preventDefault(); const t=ta.value.trim(); if(!t){ta.focus();return}
+            n.text=t; n.day=Math.max(1,parseInt(dayIn.value,10)||1); n.edited=Date.now(); save(); close() }},
+          ta,
+          el("div",{class:"row"},el("span",{class:"label",text:"Day"}),el("span",{class:"stepper"},
+            el("button",{class:"btn",type:"button","aria-label":"Day down",text:"−",onclick:()=>step(-1)}),dayIn,
+            el("button",{class:"btn",type:"button","aria-label":"Day up",text:"+",onclick:()=>step(1)}))),
+          el("div",{class:"acts"},
+            el("button",{class:"btn ghost danger",type:"button",text:"Delete",onclick:()=>{ s.notes=s.notes.filter(x=>x.id!==n.id); save(); close() }}),
+            el("div",{},el("button",{class:"btn",type:"button",text:"Cancel",onclick:close}),el("button",{class:"btn primary",type:"submit",text:"Save"}))));
+        f.addEventListener("keydown",e=>{ if(e.key==="Escape"){ e.stopPropagation(); close() } });
+        li.append(f);
+      } else {
+        li.append(el("span",{class:"dot","aria-hidden":"true"}),
+          el("button",{class:"body",type:"button","aria-label":"Edit note",onclick:()=>{ editing=`${r.slug}|notes|${n.id}`; render() }},
+            el("span",{class:"meta"},el("span",{class:"chip day",text:n.day?`Day ${n.day}`:"No day"}),
+              el("span",{class:"note-stamp",text:fmtDate(n.created)+(n.edited?" · edited":"")})),
+            el("span",{class:"t",text:n.text})));
+      }
+      ul.append(li);
+    });
+    sec.append(ul);
+  }
+  const ta = el("textarea",{id:"add-note",placeholder:"Codes, hunches, what you saw…","aria-label":"New note"});
+  sec.append(el("div",{class:"add-note"},ta,el("div",{class:"btns"},
+    el("button",{class:"btn room",type:"button",text:P.currentDay?`Add note · Day ${P.currentDay}`:"Add note",onclick:async()=>{
+      const t = ta.value.trim(); if(!t){ ta.focus(); return }
+      const day = await ensureDay(); if(!day) return;
+      s.notes.push({id:uid(),text:t,day,created:Date.now()}); save(); render();
+    }}))));
+  return sec;
+}
+
+function renderRoom(r){
+  const s = room(r.slug);
+  if(!s.visitedAt){ s.visitedAt = Date.now(); save() }
+  const c = CAT[r.cat];
+  view.replaceChildren();
+  const wrap = el("div",{style:roomVars(r)+";display:flex;flex-direction:column;gap:16px"});
+  wrap.append(el("div",{class:"backrow"},el("a",{class:"btn ghost",href:"#",text:"← Home"})));
+
+  const card = el("article",{class:"panel"},
+    el("div",{class:"card-head"+(r.slug==="aquarium"?" aq":"")},
+      el("div",{class:"row"},el("span",{class:"cat",text:r.slug==="aquarium"?"Blueprint · every colour":c.label}),
+        el("span",{class:"num",text:r.n?`№ ${pad(r.n)}`:"Outside the house"})),
+      el("h2",{text:r.name})),
+    listSec(r,"todos","To-dos","Nothing on the list yet. Add what you still need to do or remember here.","New to-do"),
+    listSec(r,"found","Found","Nothing found yet. Add items, codes or clues you found here.","What did you find?"),
+    notesSec(r));
+  wrap.append(card);
+
+  const hint = el("section",{class:"panel"});
+  const hs = el("div",{class:"sec hint"});
+  if(s.hintOpen){
+    hs.append(el("div",{class:"sec-h"},el("h3",{text:"Hint"}),el("span",{class:"label",text:"Opened"})),
+      el("p",{class:"text",text:r.hint}),
+      el("p",{class:"src"},"Based on the community wiki ",el("a",{href:"https://blueprince.wiki.gg/wiki/Room_Directory",target:"_blank",rel:"noopener",text:"blueprince.wiki.gg"}),"; may be incomplete."));
+  } else {
+    hs.append(el("div",{class:"seal"},el("span",{class:"lock","aria-hidden":"true",html:LOCK}),
+      el("p",{text:"The hint for this room is sealed. Open it only when you are stuck."})),
+      el("button",{class:"btn room",type:"button",text:"Show hint",onclick:async()=>{
+        if(!await confirmBox({title:"Show the hint?",body:"A hint may give away part of a puzzle. Once opened, it stays visible for this room.",ok:"Show hint"})) return;
+        s.hintOpen = true; save(); render();
+      }}));
+  }
+  hint.append(hs);
+  wrap.append(hint);
+
+  wrap.append(el("div",{class:"foot"},el("button",{class:"btn ghost danger",type:"button",text:"Delete room",onclick:async()=>{
+    if(!await confirmBox({title:`Delete ${r.name}?`,body:"This removes all to-dos, finds and notes for this room and seals the hint again. This cannot be undone.",ok:"Delete room",danger:true})) return;
+    delete data.rooms[r.slug]; save(); location.hash = "";
+  }})));
+  view.append(wrap);
+}
+
+// ---------- Routing ----------
+function render(){
+  renderDay();
+  const r = BY_SLUG[decodeURIComponent(location.hash.slice(1))];
+  const y = window.scrollY;
+  if(r) renderRoom(r); else renderHome();
+  window.scrollTo(0,y);
+  const ed = view.querySelector("[data-edit]");
+  if(ed){ ed.focus(); if(ed.select) ed.select() }
+}
+window.addEventListener("hashchange",()=>{ editing=null; render(); window.scrollTo(0,0) });
+window.addEventListener("storage",e=>{ if(e.key===KEY) location.reload() });
+render();
+</script>
+</body>
+</html>
