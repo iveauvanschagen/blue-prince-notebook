@@ -222,7 +222,7 @@ a.tab{text-decoration:none}
 .toolbar,.filters{display:flex;flex-direction:column;gap:8px}
 .tools.end{justify-content:flex-end;gap:8px}
 input[type=search]{width:100%;min-height:var(--tap);padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
-.cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px 2px}
+.cats{display:flex;flex-wrap:wrap;gap:6px}
 .cats::-webkit-scrollbar{display:none}
 .cat{flex:none;min-height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border:1px solid var(--line);border-radius:99px;background:var(--paper);font-family:var(--f-mono);font-size:12px;cursor:pointer;white-space:nowrap}
 .cat .sw{width:10px;height:10px;border-radius:50%;background:var(--rc)}
@@ -281,6 +281,10 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
 .g-head{border-bottom-width:1px}
 .g-head .sw{width:16px;height:16px;border-radius:0;background:none;border:1.5px solid var(--rc)}
 .foot .btn{opacity:.85}
+
+#dayback{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 8px 8px 14px;border:1px solid var(--accent);border-radius:8px;background:rgba(233,196,106,.1);font-family:var(--f-mono);font-size:13px;color:var(--accent)}
+.hint2{display:flex;flex-direction:column;gap:4px;padding:10px 0 0 12px;border-left:2px solid var(--rc,var(--accent))}
+.hint2 .label{color:var(--accent)}
 </style>
 </head>
 <body>
@@ -289,6 +293,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
     <a class="brand" href="#" aria-label="Home"><span class="label">Estate notes</span><h1>Blue Prince</h1></a>
     <div class="daybox" id="daybox"></div>
   </header>
+  <div id="dayback" hidden></div>
   <main id="view"></main>
 </div>
 <div class="ov" id="ov" hidden><div class="modal" id="modal" role="dialog" aria-modal="true"></div></div>
@@ -441,6 +446,139 @@ const ROOMS = R.map(([n,name,cat,hint]) => ({n,name,cat,hint,slug:slugOf(name)})
 const BY_SLUG = Object.fromEntries(ROOMS.map(r=>[r.slug,r]));
 const BY_NORM = Object.fromEntries(ROOMS.map(r=>[norm(r.name),r]));
 BY_NORM["lost found"] = BY_SLUG["lost-and-found"];
+// Second, deeper hint per room or place. Opens only after the first hint. Based on blueprince.wiki.gg where possible.
+const HINT2 = {
+"The Foundation":"It also gives you a way down below the house, which is where several underground places start. Once placed, it stays put on every following day.",
+"Entrance Hall":"Compare the room on different days. Notes, frames and objects that change are often clues for puzzles elsewhere in the house.",
+"Spare Room":"Upgrade disks can turn it into a more useful version. Keep it in mind once you find a way to upgrade rooms.",
+"Rotunda":"The rotation also affects which doors line up with neighbouring rooms, so you can sometimes reach a room that was cut off.",
+"Parlor":"Try each box as the prize box in turn and check whether the statements then still fit the rules: one box all true, one all false. Only one option survives. You usually get one wind-up key, so solve it fully first.",
+"Billiard Room":"Start at zero. Blue adds, yellow subtracts, pink multiplies and purple divides. Click the result on the outer number ring. You need several correct boards in a row; a wrong answer resets it.",
+"Gallery":"Treat each painting as a rebus: look for literal objects, text, odd fonts and colours, and think in synonyms and sound-alikes. Solved titles stay solved, and other rooms hold hints too.",
+"Room 8":"Use Key 8 on a locked door leading into rank 8 and the room is drafted right away. Inside, place each animal figure in the bin that its poem points to.",
+"Closet":"What you find is random, so it is worth drafting when you are short on a specific tool.",
+"Walk-In Closet":"Pairs well with bedroom bonuses such as Her Ladyship's Chamber.",
+"Attic":"Because it is a dead end, draft it on a door you were not going to use anyway.",
+"Storeroom":"Small but reliable: one of each basic resource. Good filler when nothing else fits.",
+"Nook":"A cheap way to get a key when you are short on them.",
+"Garage":"In the Utility Closet, switch the Garage breaker on. The button in the Garage then turns green and opens the door to the West Path.",
+"Music Room":"Note names (A to G) can spell words. Write down anything that looks like a sequence of notes.",
+"Locker Room":"Keys end up spread across the house, so draft it early to benefit the most.",
+"Den":"A budget room for gems, good when you need one more for a special floorplan.",
+"Wine Cellar":"Draft it at the edge of the house where a dead end costs you nothing.",
+"Trophy Room":"Trophies come from feats such as solving puzzles or special runs. The plaques are a checklist of things you have not done yet.",
+"Ballroom":"Best right after you spent your gems; worst when you have saved up.",
+"Pantry":"Save the fruit for when you are low on steps.",
+"Rumpus Room":"Combine with a shop nearby to spend the coins right away.",
+"Vault":"Coins carry you far in the shops; plan a Showroom or Commissary run after it.",
+"Office":"Read what is on and around the desk. Clues found here connect to puzzles elsewhere, including the Utility Closet.",
+"Drawing Room":"Draft it early in the run so the free redraws help you most.",
+"Study":"Each redraw costs a gem, so decide how badly you want that one room.",
+"Library":"Books you order arrive later. Some books explain mechanics or hide clues for big puzzles.",
+"Chamber of Mirrors":"A second copy of a puzzle room can give you a second try, such as an extra key for the Parlor.",
+"The Pool":"The Pump Room it adds controls water levels across the estate, including the fountain outside.",
+"Drafting Studio":"Additions are permanent, so pick one that helps every run.",
+"Utility Closet":"Switches: keycard system, Gymnasium, Darkroom and Garage. Turning off the Gymnasium removes its step cost. The six coloured buttons are a separate puzzle with clues in the Mail Room and the Office.",
+"Boiler Room":"The Laboratory and the Pump Room's reserve tank both need steam power from here.",
+"Pump Room":"Water always moves through a tank, never straight between sources. Below 12 you can enter the fountain, at 8 or lower reach the Well, and at 0 the Well leads to a door below. Free up tank space first.",
+"Security":"The terminal has a fail-safe setting for the security doors. Combined with the keycard breaker in the Utility Closet, it can open those doors without a keycard.",
+"Workshop":"Look at the blueprints on the wall for combinations. One combination makes a tool that can break certain walls.",
+"Laboratory":"Results of experiments can show up as letters in the Mail Room later. Read them.",
+"Sauna":"Best drafted late in a run, since the bonus only applies tomorrow.",
+"Coat Check":"Ideal for rare items you cannot get again easily.",
+"Mail Room":"Letters arrive over time and some appear only after certain events. Come back regularly.",
+"Freezer":"Read the in-game description again before drafting: whether it helps depends on what you are holding.",
+"Dining Room":"Place it on rank 8 or higher to get the meal.",
+"Observatory":"One of the lost floorplans was hidden here by Randolph. Search the room thoroughly.",
+"Conference Room":"A safe code for the Office can appear here.",
+"Aquarium":"Its water level is one of the sources in the Pump Room.",
+"Antechamber":"Its doors open with levers: one in the Secret Garden (point the weather vane west), one in the Greenhouse (fix the broken lever) and one in the Great Hall (behind its locked side doors).",
+"Room 46":"It lies past the north side of the Antechamber.",
+"Bedroom":"Stack it with the Nursery for even more steps.",
+"Boudoir":"Draft it after Her Ladyship's Chamber for the bonus.",
+"Guest Bedroom":"Worth it on a long route where you pass it several times.",
+"Nursery":"Bunk Room counts as two bedrooms here.",
+"Servant's Quarters":"Draft it late, once several bedrooms are in the house.",
+"Bunk Room":"Counts double for every bedroom-based bonus.",
+"Her Ladyship's Chamber":"Draft it before the Boudoir or Walk-In Closet, not after.",
+"Master Bedroom":"The more rooms you have drafted, the more it gives.",
+"Hallway":"T-shaped: good when you do not know yet which way to go.",
+"West Wing Hall":"Useful to reach the west edge, where several important rooms and doors are.",
+"East Wing Hall":"Useful to reach the east edge of the house.",
+"Corridor":"Safe for saving keys on a straight route north.",
+"Passageway":"Lots of doors means lots of new drafts: good early in a run.",
+"Secret Passage":"Use it when you need a specific colour, such as green for the Antechamber levers.",
+"Foyer":"Most valuable with many hallways in the house.",
+"Great Hall":"The six side doors are always locked. One of the small rooms behind them holds a lever for the Antechamber's east door.",
+"Terrace":"Great before drafting several green rooms in a row.",
+"Patio":"Best after you have placed several green rooms.",
+"Courtyard":"Dig spots can hide useful items.",
+"Cloister":"Statues and inscriptions may point to something elsewhere.",
+"Veranda":"Combine with the Greenhouse for many green rooms full of items.",
+"Greenhouse":"There is a broken lever here. Attach the Broken Lever item to it and it opens the Antechamber's south door for that day.",
+"Morning Room":"Draft it late in a run, since the bonus applies tomorrow.",
+"Secret Garden":"Use the Secret Garden Key on a locked door into the east or west wing between ranks 3 and 8. Turn the valves until all weather vane arrows point west: a lever for the Antechamber appears.",
+"Commissary":"Security can order one special item into its stock.",
+"Kitchen":"Buy food when you are low on steps and close to your goal.",
+"Locksmith":"Special keys are worth more than they seem.",
+"Showroom":"Some items here have permanent effects.",
+"Laundry Room":"Read exactly what gets swapped before using it.",
+"Bookshop":"Book titles hint at what they explain; pick the one that fits your current puzzle.",
+"The Armory":"Look at the walls and displays, not just the shop counter.",
+"Gift Shop":"Look for items that keep working on later days.",
+"Lavatory":"There is nothing to gain here, so treat it as a wasted door.",
+"Chapel":"Only draft it when you have coins to spare.",
+"Maid's Chamber":"It counts as a bedroom too, which can still help bedroom bonuses.",
+"Archives":"Good when you trust your luck; avoid it when you need a specific room.",
+"Gymnasium":"Switch the Gymnasium breaker off in the Utility Closet to enter without losing steps.",
+"Darkroom":"Its first entry blows a fuse. Switch the Darkroom breaker back on in the Utility Closet to see floorplans again.",
+"Weight Room":"Draft it right at the start of a day, when halving costs the least.",
+"Furnace":"Avoid it unless you want red rooms.",
+"Dovecote":"Read its effect and look around for anything carried by the doves.",
+"The Kennel":"Read its effect when drafting and look around inside.",
+"Clock Tower":"Note the time it shows and whether something changes around it.",
+"Classroom":"The exam on the board contains a clue for the Gallery.",
+"Solarium":"A green room, so it benefits from the Terrace and Veranda.",
+"Dormitory":"Draft drafting rooms first, then enter it.",
+"Vestibule":"Four doors: good for opening up the house.",
+"Casino":"Only gamble coins you can miss.",
+"Planetarium":"Plan for tomorrow: its effect shows up the next day.",
+"Mechanarium":"Look at what the machines need and where you could get it.",
+"Treasure Trove":"Costs a gem to draft but gives a lot back.",
+"Throne Room":"Costs five gems. Save up before you look for it.",
+"Tunnel":"Good for pushing straight towards a goal.",
+"Conservatory":"Costs a gem; use it when you want to steer which rooms you draw.",
+"Lost & Found":"What is left here may be from earlier runs.",
+"Closed Exhibit":"Compare what is missing with what you have found elsewhere.",
+"Toolshed":"Check which tools you are still missing.",
+"Shelter":"Draft it before a day where you expect many red rooms.",
+"Schoolhouse":"More Classrooms means more chances at the exam clue.",
+"Shrine":"Blessings from here can change the next day, such as drafting Room 8 as an outer room.",
+"Root Cellar":"Combine with a shovel and several green rooms.",
+"Hovel":"Useful on a day with plenty of steps but few gems.",
+"Trading Post":"Trade away items you have plenty of for ones you need.",
+"Tomb":"Write down any names, dates or symbols you find.",
+"The Grounds":"The fountain, the gates and the paths outside all change as you make progress in the house.",
+"West Path":"The Garage door opens onto it once the Garage has power.",
+"The Atelier":"Compare what you find here with the Gallery.",
+"Private Drive":"Several places branch off it, including a grotto and ruins.",
+"Blackbridge Grotto":"Bring a light source or tools, and come back later in the game.",
+"Orindian Ruins":"The symbols return elsewhere on the estate. Keep a note of them.",
+"Campsite":"The Gemstone Cavern and the Apple Orchard are close by.",
+"Gemstone Cavern":"Solving the coloured buttons puzzle in the Utility Closet gives permanent access, worth gems every day.",
+"Apple Orchard":"Visit it on days you need more steps.",
+"Basement":"One way in: drain the fountain to zero in the Pump Room, go down the Well and find the door at the bottom.",
+"Sealed Entrance":"Note the symbols on it and look for matching ones elsewhere.",
+"Reservoir":"Its water level is one of the sources in the Pump Room.",
+"Safehouse":"Read every document here, they explain part of the story.",
+"Well":"Reachable once the fountain is at 8 or lower. At 0 the bottom opens up.",
+"Abandoned Mine":"It floods while the fountain still holds water. Drain the fountain completely first.",
+"Catacombs":"Names and dates here may connect to the family history.",
+"The Underpass":"Keep track of which direction you came from; it connects several places.",
+"Inner Sanctum":"Keys found across the estate are needed here. Keep track of which ones you have.",
+"The Precipice":"Late-game: read everything and note what changes."
+};
+
 
 // ---------- Storage (this browser) ----------
 const KEY = "bp-notebook-v2";
@@ -481,6 +619,7 @@ const el = (tag, attrs={}, ...kids) => {
 const roomVars = r => `--rc:var(${CAT[r.cat].c});--rt:${CAT[r.cat].dark?"var(--on-yellow)":"var(--on-color)"}`;
 const fmtDate = t => t ? new Date(t).toLocaleDateString("en-GB",{day:"numeric",month:"short"}) : "";
 const pad = n => String(n).padStart(3,"0");
+const wikiUrl = r => "https://blueprince.wiki.gg/wiki/" + encodeURIComponent(r.name.replace(/ /g,"_"));
 const LOCK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 
 
@@ -571,22 +710,29 @@ function pickDay({title="What day is it?", body="Enter the day number shown in t
 async function ensureDay(){
   if(P.currentDay) return P.currentDay;
   const d = await pickDay({body:"Items for today are stamped with the current day. You only need to set it once per day."});
-  if(d){ P.currentDay = d; save(); renderDay() }
+  if(d){ P.currentDay = d; P.latestDay = d; save(); renderDay() }
   return d;
 }
 
 // ---------- Current day (header) ----------
 function renderDay(){
+  // When browsing earlier days, offer a way back to the latest known day
+  const back = document.getElementById("dayback");
+  const latest = Math.max(P.latestDay||0, P.currentDay||0);
+  back.hidden = !(P.currentDay && P.currentDay < latest);
+  back.replaceChildren(...(back.hidden ? [] : [
+    el("span",{text:`Looking at day ${P.currentDay}`}),
+    el("button",{class:"btn primary sm",type:"button",text:`Back to today (day ${latest})`,onclick:()=>{ P.currentDay=latest; save(); render() }})]));
   const box = document.getElementById("daybox");
   const has = !!P.currentDay;
   box.replaceChildren(
     el("button",{class:"btn",type:"button","aria-label":"Previous day",text:"−",disabled:!has||P.currentDay<=1,onclick:()=>{ P.currentDay=Math.max(1,P.currentDay-1); save(); render() }}),
     el("button",{class:"daynum"+(has?"":" unset"),type:"button","aria-label":"Set current day",onclick:async()=>{
-      const d = await pickDay(); if(d){ P.currentDay=d; save(); render() } }},
+      const d = await pickDay(); if(d){ P.currentDay=d; P.latestDay=d; save(); render() } }},
       el("span",{class:"label",text:"Day"}), el("b",{text:has?String(P.currentDay):"Set"})),
     el("button",{class:"btn",type:"button","aria-label":"Next day",text:"+",onclick:async()=>{
-      if(!P.currentDay){ const d = await pickDay(); if(d){ P.currentDay=d; save(); render() } return }
-      P.currentDay++; save(); render() }}));
+      if(!P.currentDay){ const d = await pickDay(); if(d){ P.currentDay=d; P.latestDay=d; save(); render() } return }
+      P.currentDay++; P.latestDay=Math.max(P.latestDay||0,P.currentDay); save(); render() }}));
 }
 
 // ---------- Items (to-dos and finds) ----------
@@ -739,7 +885,7 @@ function renderHome(){
   const g = todoGroups();
   const tile = (href,label,n,cls="") => el("a",{class:"stat "+cls,href},el("span",{class:"label",text:label}),el("b",{text:String(n)}),el("span",{class:"s-sub",text:"open to-dos"}));
   view.append(el("nav",{class:"stats","aria-label":"To-do overview"},
-    tile("#todos",P.currentDay?`Day ${P.currentDay}`:"Today",P.currentDay?openN(g.today):"–"),
+    tile("#todos","Today",P.currentDay?openN(g.today):"–"),
     tile("#todos-always","Always",openN(g.always)),
     tile("#todos-past","Past days",g.past.length,g.past.length?"warn":"")));
 
@@ -778,7 +924,7 @@ function renderTodos(tab){
   view.append(el("div",{class:"page-h"},el("a",{class:"btn ghost",href:"#",text:"← Home"}),el("h2",{text:"To-dos"})));
   const tabs = el("nav",{class:"tabs","aria-label":"To-do lists"});
   TODO_TABS.forEach(([k,h])=>{
-    const label = k==="today" ? (P.currentDay?`Day ${P.currentDay}`:"Today") : k==="always" ? "Always" : "Past days";
+    const label = k==="today" ? "Today" : k==="always" ? "Always" : "Past days";
     const n = k==="past" ? g.past.length : openN(g[k]);
     tabs.append(el("a",{class:"tab"+(k==="past"&&n?" warn":""),href:"#"+h,"aria-current":tab===k?"page":null},label,el("span",{class:"n",text:String(n)})));
   });
@@ -947,7 +1093,13 @@ function renderRoom(r){
   if(s.hintOpen){
     hs.append(el("div",{class:"sec-h"},el("h3",{text:"Hint"}),el("span",{class:"label",text:"Opened"})),
       el("p",{class:"text",text:r.hint}),
-      el("p",{class:"src"},"Based on the community wiki ",el("a",{href:"https://blueprince.wiki.gg/wiki/Room_Directory",target:"_blank",rel:"noopener",text:"blueprince.wiki.gg"}),"; may be incomplete."));
+      HINT2[r.name] ? (s.hint2Open
+        ? el("div",{class:"hint2"},el("span",{class:"label",text:"Deeper hint"}),el("p",{class:"text",text:HINT2[r.name]}))
+        : el("button",{class:"btn",type:"button",text:"Show a deeper hint",onclick:async()=>{
+            if(!await confirmBox({title:"Show a deeper hint?",body:"This hint is more specific and may give away most of the solution. Once opened, it stays visible.",ok:"Show deeper hint"})) return;
+            s.hint2Open = true; save(); render();
+          }})) : null,
+      el("p",{class:"src"},"Based on the community wiki; may be incomplete. ",el("a",{href:wikiUrl(r),target:"_blank",rel:"noopener",text:`${r.name} on the wiki ›`})));
   } else {
     hs.append(el("div",{class:"seal"},el("span",{class:"lock","aria-hidden":"true",html:LOCK}),
       el("p",{text:"The hint for this room is sealed. Open it only when you are stuck."})),

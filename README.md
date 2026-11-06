@@ -9,11 +9,11 @@ A small mobile web app for keeping notes per room while playing Blue Prince. Ope
 - Per room: to-dos (checklist), found items and notes
 - To-dos and finds are either "always" or tied to a specific day
 - Notes always carry a day stamp and can be edited
-- Current day in the header, with quick − / + buttons
+- Current day in the header, with quick − / + buttons and a way back to today after looking at earlier days
 - To-dos page with tabs for today, always and past days, plus search and colour filters
 - Past days: per item or in bulk, make it "always" or delete it
 - Rooms page with search, colour filters and sorting
-- A sealed hint per room, opened only after confirming
+- A sealed hint per room, opened only after confirming, with a deeper second hint once the first is open
 - Delete a room including all its notes
 
 ## Usage
