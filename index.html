@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0c1d3a">
+<meta name="theme-color" content="#0d2a52">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="BP Notebook">
 <title>Blue Prince Notebook</title>
@@ -12,26 +12,18 @@
 <style>
 /* Layout: one column on drafting paper, phone first. Home = current day, room search, to-do focus, your rooms. Room = floorplan card + to-dos, finds, notes, sealed hint. */
 :root{
-  --bg:#eef2f7; --grid:rgba(40,80,150,.08); --paper:#ffffff; --ink:#14284a; --muted:#56678a;
-  --line:#c9d4e4; --accent:#2a5bb8; --on-accent:#ffffff; --danger:#b8322c; --overlay:rgba(10,20,40,.55);
-  --c-blue:#3f72cc; --c-purple:#8657c4; --c-orange:#d9792b; --c-green:#3e9152; --c-yellow:#c9a21f;
-  --c-red:#c7413b; --c-black:#1d1d22; --c-outer:#8a7757;
+  /* Blueprint: one committed look, white lines on prussian blue drafting paper, gold for actions */
+  --bg:#0d2a52; --grid:rgba(190,215,255,.07); --grid-major:rgba(190,215,255,.14); --hair:rgba(200,225,255,.22);
+  --paper:rgba(6,22,48,.62); --paper-solid:#0f2d58; --ink:#eef4ff; --muted:#a9bedf; --line:rgba(190,215,255,.30);
+  --accent:#e9c46a; --on-accent:#13213a; --danger:#ff8f86; --overlay:rgba(2,10,25,.72);
+  --c-blue:#4b82df; --c-purple:#9a6be0; --c-orange:#e48a3c; --c-green:#47a660; --c-yellow:#e2bb3c;
+  --c-red:#d9524a; --c-black:#05070c; --c-outer:#9a8664; --c-grounds:#5f9a6b; --c-under:#7c8597;
   --on-color:#ffffff; --on-yellow:#2a2108;
   --f-display:"Cormorant SC","Cormorant Garamond",Georgia,serif;
   --f-body:"Spectral",Georgia,"Times New Roman",serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
   --tap:44px;
-  color-scheme:light;
-}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0c1d3a; --grid:rgba(150,190,255,.07); --paper:#122849; --ink:#e7eef9; --muted:#a3b5d3;
-  --line:#2a456f; --accent:#8fb4ff; --on-accent:#0c1d3a; --danger:#ff8a80; --overlay:rgba(0,0,0,.65);
-  --c-black:#2a2a33; --c-yellow:#d6b02c; color-scheme:dark;
-}}
-:root[data-theme="dark"]{
-  --bg:#0c1d3a; --grid:rgba(150,190,255,.07); --paper:#122849; --ink:#e7eef9; --muted:#a3b5d3;
-  --line:#2a456f; --accent:#8fb4ff; --on-accent:#0c1d3a; --danger:#ff8a80; --overlay:rgba(0,0,0,.65);
-  --c-black:#2a2a33; --c-yellow:#d6b02c; color-scheme:dark;
+  color-scheme:dark;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -82,7 +74,7 @@ a{color:inherit}
 .search p{margin:0;color:var(--muted);font-size:15px}
 .search form{display:flex;gap:8px}
 .search input{flex:1;min-width:0;min-height:52px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--paper);font-family:var(--f-display);font-size:22px;font-weight:500}
-.err{color:var(--danger);font-size:15px;min-height:1.4em;margin:0}
+.err{color:var(--danger);font-size:15px;margin:0}.err:empty{display:none}
 
 /* Panels */
 .panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}
@@ -163,7 +155,7 @@ textarea{width:100%;min-height:88px;resize:vertical;padding:10px 12px;border:1px
 .card-head::after{content:"";position:absolute;inset:7px;border:1px solid currentColor;opacity:.35;border-radius:5px;pointer-events:none}
 .card-head .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .card-head .num{font-family:var(--f-mono);font-size:13px;letter-spacing:.12em}
-.card-head .cat{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.card-head .kind{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase}
 .card-head h2{font-size:clamp(36px,10vw,52px);line-height:1}
 .aq{background:linear-gradient(90deg,var(--c-blue),var(--c-purple),var(--c-orange),var(--c-green),var(--c-yellow),var(--c-red))}
 .note-stamp{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
@@ -194,12 +186,107 @@ textarea{width:100%;min-height:88px;resize:vertical;padding:10px 12px;border:1px
 
 @media (prefers-reduced-motion:no-preference){.modal{animation:up .18s ease-out}@keyframes up{from{transform:translateY(10px);opacity:.6}to{transform:none;opacity:1}}}
 @media (max-width:380px){.add .btns .btn{padding:0 10px}}
+
+/* ---- v3: pages, filters, compact rows ---- */
+#view{display:flex;flex-direction:column;gap:16px}
+.item{gap:6px;padding:0;align-items:center}
+.item.editing{display:block}
+.check{width:40px;height:40px;margin:0 -4px 0 -8px}
+.check span{width:22px;height:22px}
+.dot{margin:0 6px 0 4px}
+.body{flex-direction:row;align-items:center;gap:8px;padding:6px 0;min-height:40px}
+.body .t{flex:1;min-width:0;font-size:16px;line-height:1.35}
+.inline-acts{display:flex;gap:4px;flex:none}
+.btn.xs{min-height:32px;padding:0 8px;font-size:12px}
+.groups{display:flex;flex-direction:column;gap:12px}
+.g-head{display:flex;align-items:center;gap:8px;text-decoration:none;padding:4px 0 6px;border-bottom:2px solid var(--rc)}
+.g-head .sw{width:10px;height:10px;border-radius:3px;background:var(--rc);flex:none}
+.g-name{font-family:var(--f-display);font-weight:700;font-size:19px;flex:1;min-width:0}
+.g-n{font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.g-go{color:var(--muted);font-size:20px;line-height:1}
+.search h2{font-size:clamp(26px,6.5vw,36px)}
+.hint-line{font-size:13px!important}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{display:flex;flex-direction:column;gap:2px;padding:10px 12px;background:var(--paper);border:1px solid var(--line);border-radius:10px;text-decoration:none;min-width:0}
+.stat:hover{border-color:var(--accent)}
+.stat .label{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat b{font-family:var(--f-display);font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+.stat .s-sub{font-family:var(--f-mono);font-size:10px;color:var(--muted)}
+.stat.warn b{color:var(--danger)}
+.more{font-family:var(--f-mono);font-size:13px;color:var(--muted);text-decoration:none;align-self:flex-start}
+.page-h{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.page-h .btn{margin-left:-14px}
+.page-h h2{font-size:32px;flex:1}
+a.tab{text-decoration:none}
+.tab[aria-current="page"]{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.toolbar,.filters{display:flex;flex-direction:column;gap:8px}
+.tools.end{justify-content:flex-end;gap:8px}
+input[type=search]{width:100%;min-height:var(--tap);padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.cats{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -14px;padding:0 14px 2px}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex:none;min-height:34px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border:1px solid var(--line);border-radius:99px;background:var(--paper);font-family:var(--f-mono);font-size:12px;cursor:pointer;white-space:nowrap}
+.cat .sw{width:10px;height:10px;border-radius:50%;background:var(--rc)}
+.cat[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.bulk{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.rlist{list-style:none;margin:0;padding:0;background:var(--paper);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.rlist li + li{border-top:1px solid color-mix(in srgb,var(--line) 60%,transparent)}
+.rrow{display:flex;align-items:center;gap:10px;padding:0 12px;min-height:48px;text-decoration:none}
+.rrow:hover{background:var(--bg)}
+.rrow .sw{width:8px;height:26px;border-radius:3px;background:var(--rc);flex:none}
+.rrow .nm{font-family:var(--f-display);font-weight:700;font-size:19px;flex:1;min-width:0}
+.rrow .no{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.rrow .open{font-family:var(--f-mono);font-size:12px;min-width:26px;height:22px;padding:0 6px;border-radius:99px;background:var(--rc);color:var(--rt);display:grid;place-items:center}
+.rrow .open.zero{background:transparent;color:var(--muted)}
+
+/* ---- v4: blueprint look ---- */
+body{background-color:var(--bg);background-image:
+  linear-gradient(var(--grid-major) 1px,transparent 1px),linear-gradient(90deg,var(--grid-major) 1px,transparent 1px),
+  linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:120px 120px,120px 120px,24px 24px,24px 24px;background-position:-1px -1px}
+.brand{gap:2px}
+.brand h1{font-size:30px;letter-spacing:.05em;order:2}
+.brand .label{font-size:9px;margin:0;order:1;letter-spacing:.2em}
+.panel,.rlist,.stat{position:relative;background:var(--paper);border-color:var(--line);backdrop-filter:blur(2px)}
+.panel::before,.stat::before{content:"";position:absolute;inset:4px;border:1px dashed var(--hair);border-radius:7px;pointer-events:none}
+.sec-h{position:relative;padding-bottom:9px}
+.sec-h::after{content:"";position:absolute;left:0;right:0;bottom:0;height:7px;pointer-events:none;
+  background:linear-gradient(var(--hair),var(--hair)) center/100% 1px no-repeat,linear-gradient(var(--hair),var(--hair)) left/1px 100% no-repeat,linear-gradient(var(--hair),var(--hair)) right/1px 100% no-repeat}
+.search > .sec-h::after{display:none}
+.search h2,.page-h h2{letter-spacing:.03em}
+.daybox{background:var(--paper-solid);border:1px solid var(--accent);border-radius:8px;box-shadow:inset 0 0 0 3px var(--paper-solid),inset 0 0 0 4px rgba(233,196,106,.35)}
+.daynum b{color:var(--accent)}
+.daynum .label{color:var(--accent);opacity:.8}
+.stat b{color:var(--ink)}
+.stat .label{color:var(--accent)}
+.stat.warn b{color:var(--danger)}
+.btn.primary{box-shadow:0 1px 0 rgba(0,0,0,.25)}
+.search input,input[type=search],.add input,textarea{background:rgba(255,255,255,.05);border-color:var(--line)}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
+.modal{background:var(--paper-solid);border-color:var(--line);position:relative}
+.modal::before{content:"";position:absolute;inset:5px;border:1px dashed var(--hair);border-radius:10px;pointer-events:none}
+.edit{background:rgba(255,255,255,.04)}
+.edit input[type=text],.edit textarea,.stepper input,.bigday input{background:rgba(255,255,255,.06)}
+.tabs{background:rgba(0,0,0,.18)}
+.tab[aria-current="page"]{background:var(--paper-solid);box-shadow:inset 0 -2px 0 var(--accent)}
+.cat{background:var(--paper)}
+.cat[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.card-head{min-height:120px;justify-content:flex-end}
+.card-head h2{padding-right:76px}
+.card-head .row{justify-content:flex-start;gap:12px}
+.card-head .plan{position:absolute;right:18px;bottom:16px;width:60px;height:60px;opacity:.95}
+.rrow .mini{width:26px;height:26px;flex:none;color:var(--rc)}
+.rrow .mini svg{display:block}
+.empty{border-color:var(--line);background:rgba(0,0,0,.12)}
+.chip{border-color:var(--line)}
+.g-head{border-bottom-width:1px}
+.g-head .sw{width:16px;height:16px;border-radius:0;background:none;border:1.5px solid var(--rc)}
+.foot .btn{opacity:.85}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <a class="brand" href="#" aria-label="Home"><h1>Blue Prince</h1><span class="label">Notebook</span></a>
+    <a class="brand" href="#" aria-label="Home"><span class="label">Estate notes</span><h1>Blue Prince</h1></a>
     <div class="daybox" id="daybox"></div>
   </header>
   <main id="view"></main>
@@ -212,7 +299,8 @@ const CAT = {
   blue:{label:"Blueprint",c:"--c-blue"}, purple:{label:"Bedroom",c:"--c-purple"},
   orange:{label:"Hallway",c:"--c-orange"}, green:{label:"Green room",c:"--c-green"},
   yellow:{label:"Shop",c:"--c-yellow",dark:true}, red:{label:"Red room",c:"--c-red"},
-  black:{label:"Blackprint",c:"--c-black"}, outer:{label:"Outer room",c:"--c-outer"}
+  black:{label:"Blackprint",c:"--c-black"}, outer:{label:"Outer room",c:"--c-outer"},
+  grounds:{label:"Grounds",c:"--c-grounds",place:true}, under:{label:"Underground",c:"--c-under",place:true}
 };
 // [number, name, category, hint]
 const R = [
@@ -325,7 +413,27 @@ const R = [
 [null,"Root Cellar","outer","Green rooms get more dig spots. Bring a shovel."],
 [null,"Hovel","outer","Special floorplans cost steps instead of gems."],
 [null,"Trading Post","outer","Trade items for other items here."],
-[null,"Tomb","outer","A tomb. Read the inscriptions carefully."]
+[null,"Tomb","outer","A tomb. Read the inscriptions carefully."],
+// Places on the estate that are not drafted rooms
+[null,"The Grounds","grounds","The open estate around the house. Walk around between runs: things outside change as you make progress inside."],
+[null,"West Path","grounds","A path along the west side of the estate. Look at what branches off it."],
+[null,"The Atelier","grounds","An artist's workplace off the West Path. Look at what was left unfinished."],
+[null,"Private Drive","grounds","The drive towards the estate. Follow it and see what lies beside it."],
+[null,"Blackbridge Grotto","grounds","A cave near the Private Drive. Look closely at what is carved or left behind, and come back once you can do more."],
+[null,"Orindian Ruins","grounds","Old ruins near the Private Drive. The symbols here are part of a larger mystery: write them down."],
+[null,"Campsite","grounds","A campsite on the grounds. Check what was left behind."],
+[null,"Gemstone Cavern","grounds","A cavern near the Campsite. As the name suggests, worth a visit when you need gems."],
+[null,"Apple Orchard","grounds","An orchard near the Campsite. Fruit means extra steps."],
+[null,"Basement","under","The space below the house. You need a way down first: The Foundation and the fountain on the grounds are worth a closer look."],
+[null,"Sealed Entrance","under","A sealed way in, underground. Look around for what could open it."],
+[null,"Reservoir","under","Underground water. Water levels controlled elsewhere matter here."],
+[null,"Safehouse","under","A hidden room within the Reservoir. Read everything inside."],
+[null,"Well","under","A well on the estate. Think about what could be down there and how to reach it."],
+[null,"Abandoned Mine","under","An old mine underground. Bring tools and watch your steps."],
+[null,"Catacombs","under","Burial passages underground. The inscriptions are worth writing down."],
+[null,"The Underpass","under","A passage leading deeper underground. Note where each way leads."],
+[null,"Inner Sanctum","under","Deep within the Underpass. Keys gathered around the estate matter here."],
+[null,"The Precipice","under","A deep place, late in the game. Take your time and read carefully."]
 ];
 const norm = s => s.toLowerCase().replace(/[’']/g,"").replace(/&/g," and ").replace(/^the\s+/,"").replace(/[^a-z0-9]+/g," ").trim();
 const slugOf = s => norm(s).replace(/ /g,"-");
@@ -374,6 +482,38 @@ const roomVars = r => `--rc:var(${CAT[r.cat].c});--rt:${CAT[r.cat].dark?"var(--o
 const fmtDate = t => t ? new Date(t).toLocaleDateString("en-GB",{day:"numeric",month:"short"}) : "";
 const pad = n => String(n).padStart(3,"0");
 const LOCK = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="1.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+
+// Standard door layout per room, as drafted (entry at the bottom). Source: blueprince.wiki.gg/wiki/Room_shape
+const SHAPE = {};
+[["d","Closet,Walk-In Closet,Attic,Storeroom,Garage,Wine Cellar,Vault,Study,Utility Closet,Sauna,Coat Check,Mail Room,Freezer,Guest Bedroom,Nursery,Servant's Quarters,Bunk Room,Her Ladyship's Chamber,Master Bedroom,Terrace,Greenhouse,Locksmith,Laundry Room,Lavatory,Furnace,Clock Tower,Solarium,Dormitory,Planetarium,Room 46"],
+ ["s","Spare Room,Gallery,Locker Room,Ballroom,Rumpus Room,Drafting Studio,Workshop,Corridor,Secret Passage,Foyer,Veranda,Showroom,The Kennel,Tunnel"],
+ ["l","Parlor,Billiard Room,Room 8,Nook,Music Room,Trophy Room,Pantry,Office,Library,Pump Room,Laboratory,Observatory,Bedroom,Boudoir,Patio,Morning Room,Commissary,Kitchen,Bookshop,The Armory,Maid's Chamber,Dovecote,Classroom,Casino,Treasure Trove,Conservatory,Lost & Found"],
+ ["t","The Foundation,Den,Drawing Room,The Pool,Boiler Room,Security,Dining Room,Conference Room,Aquarium,Hallway,West Wing Hall,East Wing Hall,Courtyard,Secret Garden,Gift Shop,Chapel,Gymnasium,Darkroom,Throne Room,Closed Exhibit"],
+ ["x","Rotunda,Chamber of Mirrors,Passageway,Great Hall,Cloister,Archives,Weight Room,Vestibule,Mechanarium,Antechamber"],
+ ["e","Entrance Hall"]
+].forEach(([k,list])=>list.split(",").forEach(n=>SHAPE[n]=k));
+// sides: 0 north, 1 east, 2 south, 3 west
+const DOORS = {d:[2], s:[0,2], l:[2,3], t:[1,2,3], x:[0,1,2,3], e:[0,1,3]};
+// A small floorplan per room: walls with its standard door openings
+function planSvg(r, size=60){
+  if(CAT[r.cat].place){
+    // Contour lines, like a site plan, for places outside the house or underground
+    const dash = r.cat==="under" ? ' stroke-dasharray="4 3"' : "";
+    return `<svg viewBox="0 0 60 60" width="${size}" height="${size}" fill="none" stroke="currentColor" aria-hidden="true"><path d="M30 6C45 6 55 16 54 30S44 55 29 54 6 44 6 30 15 6 30 6z" stroke-width="${size<40?4:2.5}"${dash}/>${size<40?"":'<path d="M30 16C40 16 45 23 44 31S37 45 29 44 16 38 16 30 21 16 30 16z" stroke-width="1" opacity=".7"/><circle cx="30" cy="30" r="5" stroke-width="1" opacity=".6"/>'}</svg>`;
+  }
+  const doors = DOORS[SHAPE[r.name]||"d"];
+  const a=6,b=54,m=30,g=7;
+  const side=(i,x1,y1,x2,y2)=>{
+    if(!doors.includes(i)) return `M${x1} ${y1}L${x2} ${y2}`;
+    return x1===x2 ? `M${x1} ${y1}L${x1} ${m-g}M${x1} ${m+g}L${x2} ${y2}` : `M${x1} ${y1}L${m-g} ${y1}M${m+g} ${y1}L${x2} ${y2}`;
+  };
+  const walls=side(0,a,a,b,a)+side(1,b,a,b,b)+side(2,a,b,b,b)+side(3,a,a,a,b);
+  const swing={0:`M${m-g} ${a}L${m-g} ${a+2*g}A${2*g} ${2*g} 0 0 0 ${m+g} ${a}`,1:`M${b} ${m-g}L${b-2*g} ${m-g}A${2*g} ${2*g} 0 0 0 ${b} ${m+g}`,
+    2:`M${m+g} ${b}L${m+g} ${b-2*g}A${2*g} ${2*g} 0 0 0 ${m-g} ${b}`,3:`M${a} ${m+g}L${a+2*g} ${m+g}A${2*g} ${2*g} 0 0 0 ${a} ${m-g}`};
+  const arcs=doors.map(i=>swing[i]).join("");
+  return `<svg viewBox="0 0 60 60" width="${size}" height="${size}" fill="none" stroke="currentColor" aria-hidden="true"><path d="${walls}" stroke-width="${size<40?4:3}" stroke-linecap="square"/>${size<40?"":`<path d="${arcs}" stroke-width="1" opacity=".7"/><path d="M14 14h32v32h-32z" stroke-width=".75" stroke-dasharray="2 3" opacity=".45"/>`}</svg>`;
+}
 
 // ---------- Modals ----------
 const ov = document.getElementById("ov"), modal = document.getElementById("modal");
@@ -450,34 +590,28 @@ function renderDay(){
 }
 
 // ---------- Items (to-dos and finds) ----------
-const LABEL = {todos:{always:"Always"}, found:{always:"Always there"}};
+const LABEL = {todos:"Always", found:"Always there"};
 let editing = null; // "slug|key|id"
 
-function itemRow(slug, key, it, {showRoom=false, onChange}){
+function itemRow(slug, key, it, {onChange, pastActions=true, hideDay=false}){
   const r = BY_SLUG[slug], s = room(slug);
   const isTodo = key==="todos";
   const li = el("li",{class:"item"+(it.done?" done":""),style:roomVars(r)});
-  if(editing === `${slug}|${key}|${it.id}`){ li.append(editForm(slug,key,it,onChange)); return li }
+  if(editing === `${slug}|${key}|${it.id}`){ li.classList.add("editing"); li.append(editForm(slug,key,it,onChange)); return li }
   if(isTodo){
     li.append(el("label",{class:"check"},
       el("input",{type:"checkbox",checked:!!it.done,"aria-label":`Done: ${it.text}`,onchange:e=>{ it.done=e.target.checked; save(); onChange() }}),
       el("span",{"aria-hidden":"true"})));
   } else li.append(el("span",{class:"dot","aria-hidden":"true"}));
   const past = isPast(it);
-  const meta = el("span",{class:"meta"},
-    showRoom ? el("a",{class:"chip room",href:"#"+slug,onclick:e=>e.stopPropagation(),text:r.name}) : null,
-    it.scope==="today"
-      ? el("span",{class:"chip day"+(past?" past":""),text:`Day ${it.day}${past?" · past":""}`})
-      : el("span",{class:"chip",text:LABEL[key].always}));
-  const body = el("button",{class:"body",type:"button","aria-label":`Edit: ${it.text}`,onclick:()=>{ editing=`${slug}|${key}|${it.id}`; onChange(true) }},
-    el("span",{class:"t",text:it.text}), meta);
-  const col = el("div",{class:"col"},body);
-  if(past && !it.done){
-    col.append(el("div",{class:"quick"},
-      el("button",{class:"btn sm",type:"button",text:"Make always",onclick:()=>{ it.scope="always"; it.day=null; save(); onChange() }}),
-      el("button",{class:"btn sm danger",type:"button",text:"Delete",onclick:()=>{ s[key]=s[key].filter(x=>x.id!==it.id); save(); onChange() }})));
+  li.append(el("button",{class:"body",type:"button","aria-label":`Edit: ${it.text}`,onclick:()=>{ editing=`${slug}|${key}|${it.id}`; onChange() }},
+    el("span",{class:"t",text:it.text}),
+    it.scope==="today" && !hideDay ? el("span",{class:"chip day"+(past?" past":""),title:past?"From an earlier day":null,text:`Day ${it.day}`}) : null));
+  if(pastActions && past && !it.done){
+    li.append(el("span",{class:"inline-acts"},
+      el("button",{class:"btn xs",type:"button",title:"Make always","aria-label":`Make always: ${it.text}`,text:"Always",onclick:()=>{ it.scope="always"; it.day=null; save(); onChange() }}),
+      el("button",{class:"btn xs danger",type:"button","aria-label":`Delete: ${it.text}`,text:"✕",onclick:()=>{ s[key]=s[key].filter(x=>x.id!==it.id); save(); onChange() }})));
   }
-  li.append(col);
   return li;
 }
 
@@ -492,7 +626,7 @@ function editForm(slug, key, it, onChange){
     el("button",{class:"btn",type:"button","aria-label":"Day up",text:"+",onclick:()=>step(1)}));
   stepper.hidden = scope!=="today";
   const seg = el("span",{class:"seg",role:"radiogroup","aria-label":"When"});
-  [["always",LABEL[key].always],["today","One day"]].forEach(([v,l])=>{
+  [["always",LABEL[key]],["today","One day"]].forEach(([v,l])=>{
     const b = el("button",{type:"button",role:"radio","aria-checked":String(scope===v),text:l,onclick:()=>{
       scope=v; seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-checked",String(x===b))); stepper.hidden = v!=="today" }});
     seg.append(b);
@@ -538,17 +672,59 @@ function hideToggle(doneCount, onChange){
     text:P.hideDone?`Show done (${doneCount})`:"Hide done",onclick:()=>{ P.hideDone=!P.hideDone; save(); onChange() }});
 }
 
+// ---------- Shared: to-do groups, filters ----------
+function todoGroups(){
+  const all = [];
+  Object.entries(data.rooms).forEach(([slug,s])=>{ if(BY_SLUG[slug]) (s.todos||[]).forEach(it=>all.push({slug,it})) });
+  return {
+    today: all.filter(x=>x.it.scope==="today" && P.currentDay && x.it.day===P.currentDay),
+    always: all.filter(x=>(x.it.scope||"always")==="always"),
+    past: all.filter(x=>isPast(x.it) && !x.it.done)
+  };
+}
+const openN = g => g.filter(x=>!x.it.done).length;
+
+const FILTER = {q:"", cat:"all"};
+function matches(r, text){
+  if(FILTER.cat!=="all" && r.cat!==FILTER.cat) return false;
+  const q = FILTER.q.trim().toLowerCase();
+  if(!q) return true;
+  return r.name.toLowerCase().includes(q) || (text||"").toLowerCase().includes(q);
+}
+function filterBar(placeholder, cats){
+  const q = el("input",{type:"search",id:"filter-q",value:FILTER.q,placeholder,"aria-label":placeholder,autocomplete:"off",enterkeyhint:"search"});
+  q.addEventListener("input",()=>{ FILTER.q = q.value; render(); const n=document.getElementById("filter-q"); if(n){ n.focus(); n.setSelectionRange(n.value.length,n.value.length) } });
+  const chips = el("div",{class:"cats",role:"group","aria-label":"Filter by colour"});
+  const mk = (k,label,vars) => chips.append(el("button",{type:"button",class:"cat",style:vars,"aria-pressed":String(FILTER.cat===k),onclick:()=>{ FILTER.cat = FILTER.cat===k&&k!=="all"?"all":k; render() }},
+    k==="all"?null:el("span",{class:"sw","aria-hidden":"true"}), label));
+  mk("all","All","");
+  Object.keys(CAT).filter(k=>cats.has(k)).forEach(k=>mk(k,CAT[k].label,`--rc:var(${CAT[k].c})`));
+  return el("div",{class:"filters"},q,chips);
+}
+
+// Entries grouped under a compact room header
+function groupedList(entries, onChange, opts={}){
+  const by = new Map();
+  entries.forEach(e=>{ if(!by.has(e.slug)) by.set(e.slug,[]); by.get(e.slug).push(e.it) });
+  const wrap = el("div",{class:"groups"});
+  [...by.keys()].sort((a,b)=>BY_SLUG[a].name.localeCompare(BY_SLUG[b].name)).forEach(slug=>{
+    const r = BY_SLUG[slug], items = sortTodos(by.get(slug));
+    wrap.append(el("section",{class:"group",style:roomVars(r)},
+      el("a",{class:"g-head",href:"#"+slug},el("span",{class:"sw"+(slug==="aquarium"?" aq":""),"aria-hidden":"true"}),
+        el("span",{class:"g-name",text:r.name}),el("span",{class:"g-n",text:String(items.filter(i=>!i.done).length)}),el("span",{class:"g-go","aria-hidden":"true",text:"›"})),
+      el("ul",{class:"list"},items.map(it=>itemRow(slug,"todos",it,{onChange,...opts})))));
+  });
+  return wrap;
+}
+
 // ---------- Home ----------
 function renderHome(){
   view.replaceChildren();
-  const rerender = () => render();
-
-  // Search
+  // Room search
   const err = el("p",{class:"err",role:"status"});
   const input = el("input",{type:"text",placeholder:"e.g. Parlor",autocomplete:"off",autocapitalize:"words",spellcheck:"false","aria-label":"Room name",enterkeyhint:"go"});
   view.append(el("section",{class:"search"},
-    el("h2",{text:"Which room did you draft?"}),
-    el("p",{text:"Type the exact room name as shown in the game. You only see rooms you have found yourself, no spoilers."}),
+    el("h2",{text:"Which room or place?"}),
     el("form",{onsubmit:e=>{
       e.preventDefault();
       const q = norm(input.value);
@@ -556,73 +732,127 @@ function renderHome(){
       const r = BY_NORM[q];
       if(!r){ err.textContent=`No room called "${input.value.trim()}". Check the spelling as shown in the game.`; return }
       location.hash = r.slug;
-    }}, input, el("button",{class:"btn primary",type:"submit",text:"Open"})), err));
+    }}, input, el("button",{class:"btn primary",type:"submit",text:"Open"})),
+    el("p",{class:"hint-line",text:"Exact name as shown in the game, like Parlor. No list, so no spoilers."}), err));
 
-  // To-do focus
-  const all = [];
-  Object.entries(data.rooms).forEach(([slug,s])=>{ if(BY_SLUG[slug]) (s.todos||[]).forEach(it=>all.push({slug,it})) });
-  const groups = {
-    today: all.filter(x=>x.it.scope==="today" && P.currentDay && x.it.day===P.currentDay),
-    anytime: all.filter(x=>(x.it.scope||"always")==="always"),
-    past: all.filter(x=>isPast(x.it) && !x.it.done)
-  };
-  const openN = g => g.filter(x=>!x.it.done).length;
-  let tab = P.tab in groups ? P.tab : "today";
+  // Overview tiles
+  const g = todoGroups();
+  const tile = (href,label,n,cls="") => el("a",{class:"stat "+cls,href},el("span",{class:"label",text:label}),el("b",{text:String(n)}),el("span",{class:"s-sub",text:"open to-dos"}));
+  view.append(el("nav",{class:"stats","aria-label":"To-do overview"},
+    tile("#todos",P.currentDay?`Day ${P.currentDay}`:"Today",P.currentDay?openN(g.today):"–"),
+    tile("#todos-always","Always",openN(g.always)),
+    tile("#todos-past","Past days",g.past.length,g.past.length?"warn":"")));
+
+  // Today preview
   const panel = el("section",{class:"panel"});
   const sec = el("div",{class:"sec"});
-  const shownGroup = tab==="past" ? groups.past : groups[tab];
-  const doneN = tab==="past" ? 0 : shownGroup.filter(x=>x.it.done).length;
-  sec.append(el("div",{class:"sec-h"},el("h3",{text:"To-dos"}),el("div",{class:"tools"},hideToggle(doneN,rerender))));
-  const tabs = el("div",{class:"tabs",role:"tablist"});
-  [["today",P.currentDay?`Day ${P.currentDay}`:"Today"],["anytime","Always"],["past","Past days"]].forEach(([k,l])=>{
-    tabs.append(el("button",{class:"tab"+(k==="past"&&groups.past.length?" warn":""),role:"tab",type:"button","aria-selected":String(tab===k),onclick:async()=>{
-      if(k==="today" && !P.currentDay){ if(!await ensureDay()) return }
-      P.tab=k; save(); render();
-    }}, l, el("span",{class:"n",text:String(openN(groups[k]))})));
-  });
-  sec.append(tabs);
-
-  if(tab==="today" && !P.currentDay){
+  sec.append(el("div",{class:"sec-h"},el("h3",{text:"Today"}),el("a",{class:"btn ghost sm",href:"#todos",text:"All to-dos ›"})));
+  if(!P.currentDay){
     sec.append(el("p",{class:"muted",text:"Set the current day to see what you planned for today."}),
       el("button",{class:"btn primary",type:"button",text:"Set current day",onclick:async()=>{ if(await ensureDay()) render() }}));
   } else {
-    let list = tab==="past" ? groups.past : [...shownGroup.filter(x=>!x.it.done), ...shownGroup.filter(x=>x.it.done)];
-    if(P.hideDone && tab!=="past") list = list.filter(x=>!x.it.done);
-    if(!list.length){
-      const msg = {today:"Nothing planned for today. Add a to-do in a room with the Day + button.",
-        anytime:"No open to-dos that always apply.", past:"No leftovers from earlier days."}[tab];
-      sec.append(el("p",{class:"muted",text: shownGroup.length && P.hideDone ? "Everything here is done." : msg}));
-    } else {
-      const ul = el("ul",{class:"list"});
-      list.forEach(({slug,it})=>ul.append(itemRow(slug,"todos",it,{showRoom:true,onChange:rerender})));
-      sec.append(ul);
-      if(tab==="past") sec.append(el("div",{class:"quick"},
-        el("button",{class:"btn sm",type:"button",text:"Make all always",onclick:()=>{ list.forEach(({it})=>{ it.scope="always"; it.day=null }); save(); render() }}),
-        el("button",{class:"btn sm danger",type:"button",text:"Delete all",onclick:async()=>{
-          if(!await confirmBox({title:"Delete past to-dos?",body:`This removes ${list.length} to-do${list.length>1?"s":""} from earlier days.`,ok:"Delete",danger:true})) return;
-          list.forEach(({slug,it})=>{ const s=room(slug); s.todos=s.todos.filter(x=>x.id!==it.id) }); save(); render() }})));
+    const open = g.today.filter(x=>!x.it.done);
+    if(!open.length) sec.append(el("p",{class:"muted",text:`Nothing open for day ${P.currentDay}. Add one in a room with the Day + button.`}));
+    else {
+      sec.append(groupedList(open.slice(0,8), render, {hideDay:true}));
+      if(open.length>8) sec.append(el("a",{class:"more",href:"#todos",text:`${open.length-8} more for today ›`}));
     }
   }
   panel.append(sec);
   view.append(panel);
 
-  // Your rooms
-  const visited = ROOMS.filter(r=>data.rooms[r.slug] && data.rooms[r.slug].visitedAt).sort((a,b)=>data.rooms[b.slug].visitedAt-data.rooms[a.slug].visitedAt);
+  // Recent rooms
+  const visited = visitedRooms();
   const rs = el("section",{class:"search"});
-  rs.append(el("div",{class:"sec-h"},el("h3",{text:"Your rooms"}),el("span",{class:"count",text:visited.length?String(visited.length):""})));
+  rs.append(el("div",{class:"sec-h"},el("h3",{text:"Recent rooms"}),visited.length?el("a",{class:"btn ghost sm",href:"#rooms",text:`All ${visited.length} ›`}):null));
   if(!visited.length) rs.append(el("div",{class:"empty",text:"No rooms yet. Open your first room above, for example the Entrance Hall."}));
-  else {
-    const ul = el("ul",{class:"rooms"});
-    visited.forEach(r=>{
-      const s = room(r.slug), open = s.todos.filter(t=>!t.done).length;
-      const meta = [r.n?`№ ${pad(r.n)}`:CAT[r.cat].label, open?`${open} to do`:""].filter(Boolean).join(" · ");
-      ul.append(el("li",{},el("a",{class:"tile",href:"#"+r.slug,style:roomVars(r)},
-        el("span",{class:"sw"+(r.slug==="aquarium"?" aq":"")}),
-        el("span",{class:"tx"},el("span",{class:"nm",text:r.name}),el("span",{class:"mt",text:meta})))));
-    });
-    rs.append(ul);
-  }
+  else rs.append(roomList(visited.slice(0,6)));
   view.append(rs);
+}
+
+// ---------- To-dos page ----------
+const TODO_TABS = [["today","todos"],["always","todos-always"],["past","todos-past"]];
+function renderTodos(tab){
+  view.replaceChildren();
+  const g = todoGroups();
+  view.append(el("div",{class:"page-h"},el("a",{class:"btn ghost",href:"#",text:"← Home"}),el("h2",{text:"To-dos"})));
+  const tabs = el("nav",{class:"tabs","aria-label":"To-do lists"});
+  TODO_TABS.forEach(([k,h])=>{
+    const label = k==="today" ? (P.currentDay?`Day ${P.currentDay}`:"Today") : k==="always" ? "Always" : "Past days";
+    const n = k==="past" ? g.past.length : openN(g[k]);
+    tabs.append(el("a",{class:"tab"+(k==="past"&&n?" warn":""),href:"#"+h,"aria-current":tab===k?"page":null},label,el("span",{class:"n",text:String(n)})));
+  });
+  view.append(tabs);
+
+  if(tab==="today" && !P.currentDay){
+    view.append(el("div",{class:"panel"},el("div",{class:"sec"},
+      el("p",{class:"muted",text:"Set the current day to see what you planned for today."}),
+      el("button",{class:"btn primary",type:"button",text:"Set current day",onclick:async()=>{ if(await ensureDay()) render() }}))));
+    return;
+  }
+  const source = g[tab];
+  const cats = new Set(source.map(x=>BY_SLUG[x.slug].cat));
+  const doneN = tab==="past" ? 0 : source.filter(x=>x.it.done && matches(BY_SLUG[x.slug],x.it.text)).length;
+  view.append(el("div",{class:"toolbar"},filterBar("Search to-dos or rooms",cats),
+    tab!=="past" ? el("div",{class:"tools end"},hideToggle(doneN,render)) : null));
+
+  let list = source.filter(x=>matches(BY_SLUG[x.slug],x.it.text));
+  if(P.hideDone && tab!=="past") list = list.filter(x=>!x.it.done);
+
+  const panel = el("section",{class:"panel"});
+  const sec = el("div",{class:"sec"});
+  if(tab==="past" && list.length){
+    sec.append(el("div",{class:"bulk"},
+      el("span",{class:"muted",text:`${list.length} left over from earlier days`}),
+      el("span",{class:"tools"},
+        el("button",{class:"btn sm",type:"button",text:"Make all always",onclick:async()=>{
+          if(!await confirmBox({title:"Make all always?",body:`${list.length} to-do${list.length>1?"s":""} will no longer be tied to a day.`,ok:"Make always"})) return;
+          list.forEach(({it})=>{ it.scope="always"; it.day=null }); save(); render() }}),
+        el("button",{class:"btn sm danger",type:"button",text:"Delete all",onclick:async()=>{
+          if(!await confirmBox({title:"Delete all past to-dos?",body:`This removes ${list.length} to-do${list.length>1?"s":""} from earlier days. This cannot be undone.`,ok:"Delete all",danger:true})) return;
+          list.forEach(({slug,it})=>{ const s=room(slug); s.todos=s.todos.filter(x=>x.id!==it.id) }); save(); render() }}))));
+  }
+  if(!list.length){
+    const filtered = FILTER.q || FILTER.cat!=="all";
+    const msg = filtered ? "No to-dos match this search." :
+      {today:`Nothing planned for day ${P.currentDay}. Add one in a room with the Day + button.`,
+       always:"No to-dos that always apply.", past:"No leftovers from earlier days."}[tab];
+    sec.append(el("p",{class:"muted",text: !filtered && source.length && P.hideDone ? "Everything here is done." : msg}));
+  } else sec.append(groupedList(list, render, {hideDay:tab==="today"}));
+  panel.append(sec);
+  view.append(panel);
+}
+
+// ---------- Rooms page ----------
+function visitedRooms(){
+  return ROOMS.filter(r=>data.rooms[r.slug] && data.rooms[r.slug].visitedAt).sort((a,b)=>data.rooms[b.slug].visitedAt-data.rooms[a.slug].visitedAt);
+}
+function roomList(rooms){
+  const ul = el("ul",{class:"rlist"});
+  rooms.forEach(r=>{
+    const s = room(r.slug), open = s.todos.filter(t=>!t.done).length;
+    ul.append(el("li",{},el("a",{class:"rrow",href:"#"+r.slug,style:roomVars(r)},
+      el("span",{class:"mini",html:planSvg(r,26)}),
+      el("span",{class:"nm",text:r.name}),
+      el("span",{class:"no",text:r.n?`№ ${pad(r.n)}`:CAT[r.cat].place?CAT[r.cat].label:"Outer"}),
+      el("span",{class:"open"+(open?"":" zero"),title:"Open to-dos",text:open?String(open):"–"}))));
+  });
+  return ul;
+}
+function renderRooms(){
+  view.replaceChildren();
+  const all = visitedRooms();
+  view.append(el("div",{class:"page-h"},el("a",{class:"btn ghost",href:"#",text:"← Home"}),el("h2",{text:"Rooms and places"}),el("span",{class:"count",text:String(all.length)})));
+  if(!all.length){ view.append(el("div",{class:"empty",text:"No rooms yet. Open your first room from the home page."})); return }
+  const sorts = [["recent","Recent"],["name","A–Z"],["open","Open to-dos"]];
+  const sort = sorts.some(([k])=>k===P.roomSort) ? P.roomSort : "recent";
+  const seg = el("span",{class:"seg",role:"radiogroup","aria-label":"Sort"});
+  sorts.forEach(([k,l])=>seg.append(el("button",{type:"button",role:"radio","aria-checked":String(sort===k),text:l,onclick:()=>{ P.roomSort=k; save(); render() }})));
+  view.append(el("div",{class:"toolbar"},filterBar("Search rooms and places",new Set(all.map(r=>r.cat))),el("div",{class:"tools end"},el("span",{class:"label",text:"Sort"}),seg)));
+  let list = all.filter(r=>matches(r,""));
+  if(sort==="name") list.sort((a,b)=>a.name.localeCompare(b.name));
+  if(sort==="open") list.sort((a,b)=>room(b.slug).todos.filter(t=>!t.done).length-room(a.slug).todos.filter(t=>!t.done).length);
+  view.append(list.length ? roomList(list) : el("p",{class:"muted",text:"No rooms match this search."}));
 }
 
 // ---------- Room ----------
@@ -704,9 +934,9 @@ function renderRoom(r){
 
   const card = el("article",{class:"panel"},
     el("div",{class:"card-head"+(r.slug==="aquarium"?" aq":"")},
-      el("div",{class:"row"},el("span",{class:"cat",text:r.slug==="aquarium"?"Blueprint · every colour":c.label}),
-        el("span",{class:"num",text:r.n?`№ ${pad(r.n)}`:"Outside the house"})),
-      el("h2",{text:r.name})),
+      el("div",{class:"row"},el("span",{class:"kind",text:r.slug==="aquarium"?"Blueprint · every colour":c.label}),
+        el("span",{class:"num",text:r.n?`№ ${pad(r.n)}`:CAT[r.cat].place?"":"Outside the house"})),
+      el("h2",{text:r.name}), el("span",{class:"plan",html:planSvg(r)})),
     listSec(r,"todos","To-dos","Nothing on the list yet. Add what you still need to do or remember here.","New to-do"),
     listSec(r,"found","Found","Nothing found yet. Add items, codes or clues you found here.","What did you find?"),
     notesSec(r));
@@ -737,16 +967,25 @@ function renderRoom(r){
 }
 
 // ---------- Routing ----------
+const pageOf = h => TODO_TABS.some(([,x])=>x===h) ? "todos" : h==="rooms" ? "rooms" : "other";
+let lastPage = pageOf(decodeURIComponent(location.hash.slice(1)));
 function render(){
   renderDay();
-  const r = BY_SLUG[decodeURIComponent(location.hash.slice(1))];
+  const h = decodeURIComponent(location.hash.slice(1));
   const y = window.scrollY;
-  if(r) renderRoom(r); else renderHome();
+  const t = TODO_TABS.find(([,x])=>x===h);
+  if(t) renderTodos(t[0]); else if(h==="rooms") renderRooms(); else if(BY_SLUG[h]) renderRoom(BY_SLUG[h]); else renderHome();
   window.scrollTo(0,y);
   const ed = view.querySelector("[data-edit]");
   if(ed){ ed.focus(); if(ed.select) ed.select() }
 }
-window.addEventListener("hashchange",()=>{ editing=null; render(); window.scrollTo(0,0) });
+window.addEventListener("hashchange",()=>{
+  editing=null;
+  const p = pageOf(decodeURIComponent(location.hash.slice(1)));
+  if(p!==lastPage){ FILTER.q=""; FILTER.cat="all" }
+  lastPage = p;
+  render(); window.scrollTo(0,0);
+});
 window.addEventListener("storage",e=>{ if(e.key===KEY) location.reload() });
 render();
 </script>
