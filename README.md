@@ -1,10 +1,12 @@
 # Blue Prince Notebook
 
-A small mobile web app for keeping notes per room while playing Blue Prince. Open a room by typing its exact name, then keep track of what to do, what you found and what you noticed there.
+A small mobile web app for keeping notes while playing Blue Prince. Open a room, place, item, book or person by typing its exact name, then keep track of what to do, what you found and what you noticed there.
 
 ## Features
 
-- Open a room or place (like the grounds or underground areas) by its exact in-game name, without a list of names (no spoilers)
+- Open a room, place, item, book or person by its exact in-game name, without a list of names (no spoilers)
+- Create your own General page with any title for everything else
+- Overview tabs for House, Grounds (outside and underground), Items, Books, People and General
 - Each room page uses the room's colour, number and a drawing of its standard door layout
 - Per room: to-dos (checklist), found items and notes
 - To-dos and finds are either "always" or tied to a specific day
